@@ -11,21 +11,35 @@
  }
 
 
-
- function displayLoginPage(req,res){
- 	res.render('login');
- }
-
- function authenticate(req,res){
- 	var id = req.body.id;
+ function processLogin(req,res){
+ 	var user_id = req.body.user_id;
  	var password = req.body.password;
- 	if (id == 'john' && password == 'password') {
- 		req.session.id = id;
+
+ 	if (user_id == 'john' && password == 'password') {
+ 		req.session.user_id = user_id;
  		res.redirect('/loginSuccess');
  	} else {
  		res.redirect('/login');
  	}
  }
 
+
+function displayLoginPage(req,res){
+	res.render('login');
+}
+
+function displayLoginSuccessPage(req,res){
+	res.render('loginSuccess', {user_id: req.session.user_id});
+}
+
+function displayLogout(req,res){
+	req.session.destroy();
+  	res.render('logout');
+}
+
+
+ module.exports.checkAuth = checkAuth;
+ module.exports.processLogin = processLogin;
  module.exports.displayLoginPage = displayLoginPage;
- module.exports.authenticate = authenticate;
+ module.exports.displayLoginSuccessPage = displayLoginSuccessPage;
+ module.exports.displayLogout = displayLogout;

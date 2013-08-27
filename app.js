@@ -9,7 +9,7 @@ var http = require('http');
 var path = require('path');
 
 var authentication = require('./routes/authentication');
-
+var stock = require('./routes/stock');
 var app = express();
 
 // all environments
@@ -31,7 +31,22 @@ if ('development' == app.get('env')) {
 }
 
 app.get('/login', authentication.displayLoginPage);
-app.post('/processLogin',authentication.authenticate);
+app.post('/processLogin',authentication.processLogin);
+app.get('/loginSuccess',authentication.checkAuth, authentication.displayLoginSuccessPage);
+app.get('/logout', authentication.displayLogout);      
+
+app.get('/buy', authentication.checkAuth,stock.displayBuyPage);
+app.post('/processBuy',authentication.checkAuth,stock.processBuy);
+app.get('/buySuccess', authentication.checkAuth,stock.displayBuySuccessPage);
+app.get('/buyFail', authentication.checkAuth,stock.displayBuyFailPage);
+
+
+
+//all other pages will get directed to login page
+app.get('*', function(req, res){
+  res.redirect('login');
+});
+
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));
