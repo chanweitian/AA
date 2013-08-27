@@ -11,12 +11,11 @@
  	 to replace with 
 	- boolean bidIsAccepted 
 			= exchangeBean.placeNewBidAndAttemptMatch(newBid); */
- 	var bidIsAccepted = true;
+ 	var bidIsAccepted = false;
+ 	req.session.stock = stock;
+ 	req.session.bidPrice = bidPrice;
 
  	if (bidIsAccepted){
-
- 		req.session.stock = stock;
- 		req.session.bidPrice = bidPrice;
  		res.redirect('buySuccess');
  	} else {
  		res.redirect('buyFail');
@@ -36,7 +35,15 @@
  }
 
  function displayBuyFailPage (req,res) {
+ 	var user_id = req.session.user_id;
+ 	var stock = req.session.stock;
+ 	var bidPrice = req.session.bidPrice;
 
+ 	res.render('buyFail', {
+ 		user_id: user_id,
+ 		stock: stock,
+ 		bidPrice: bidPrice
+ 	});
  }
 
 
