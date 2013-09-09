@@ -3,13 +3,13 @@
  * GET home page.
  */
  function checkAuth(req, res, next) {
+
  	if (!req.session.user_id) {
  		res.redirect('/login');
  	} else {
  		next();
  	}
  }
-
 
  function processLogin(req,res){
  	var user_id = req.body.user_id;
@@ -25,7 +25,11 @@
 
 
 function displayLoginPage(req,res){
-	res.render('login');
+	if (!req.session.user_id) {
+		res.render('login');
+	} else {
+		res.redirect('/loginSuccess')
+	}
 }
 
 function displayLoginSuccessPage(req,res){

@@ -40,12 +40,15 @@ app.post('/processBuy',authentication.checkAuth,stock.processBuy);
 app.get('/buySuccess', authentication.checkAuth,stock.displayBuySuccessPage);
 app.get('/buyFail', authentication.checkAuth,stock.displayBuyFailPage);
 
+app.get('/sell', authentication.checkAuth,stock.displaySellPage);
+app.post('/processSell',authentication.checkAuth,stock.processSell);
 
+app.get('/current',authentication.checkAuth,stock.displayCurrentPage);
+
+app.get('/viewOrders',authentication.checkAuth,stock.displayOrdersPage);
 
 //all other pages will get directed to login page
-app.get('*', function(req, res){
-  res.redirect('login');
-});
+app.get('*', authentication.displayLoginPage);
 
 
 http.createServer(app).listen(app.get('port'), function(){
