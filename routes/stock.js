@@ -1,5 +1,6 @@
  var bidModule = require("./Bid");
  var askModule = require("./Ask");
+ var exchange = require("./exchange");
 
  function displayBuyPage(req, res) {
  	res.render('buy',{user_id: req.session.user_id});
@@ -12,19 +13,20 @@
 
  	/*submit buy request 
  	 to replace with 
-	- boolean bidIsAccepted 
-	= exchangeBean.placeNewBidAndAttemptMatch(newBid); */
-	var bidIsAccepted = true;
-	req.session.stock = stock;
-	req.session.bidPrice = bidPrice;
+	- boolean bidIsAccepted */
 
 	var newBid = new bidModule.Bid(stock, bidPrice, user_id);
 
-	if (bidIsAccepted){
-		res.redirect('buySuccess');
-	} else {
-		res.redirect('buyFail');
-	}
+	exchange.placeNewBidAndAttemptMatch(newBid, function(err, bidIsAccepted){
+		req.session.stock = stock;
+		req.session.bidPrice = bidPrice;
+		
+		if (bidIsAccepted){
+			res.redirect('buySuccess');
+		} else {
+			res.redirect('buyFail');
+		}
+	}); 
 }
 
 function displayBuySuccessPage(req,res){
@@ -54,7 +56,7 @@ function processSell(req,res){
 
 	var newAsk = new askModule.Ask(stock, askPrice, user_id);
 
- 	//exchangeBean.placeNewAskAndAttemptMatch(newAsk);
+ 	//exchange.placeNewAskAndAttemptMatch(newAsk);
 
  	res.render('sellSuccess', {
  		user_id: req.session.user_id,
