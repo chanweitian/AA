@@ -67,31 +67,107 @@ function processSell(req,res){
 
  function displayCurrentPage(req,res){
 
- 	/*
+ 	var TOTAL_COUNTER = 9;
+ 	var counter = 0;
+	var latestPrice_SMU;
+	var highestBidPrice_SMU;
+	var lowestAskPrice_SMU;
+	var latestPrice_NUS;
+	var highestBidPrice_NUS;
+	var lowestAskPrice_NUS;
+	var latestPrice_NTU;
+	var highestBidPrice_NTU;
+	var lowestAskPrice_NTU;
 
- 	latestPrice_SMU: exchange.getLatestPrice("smu");
- 	highestBidPrice_SMU: exchange.getHighestBidPrice("smu");
- 	lowestAskPrice_SMU: exchange.getLowestAskPrice("smu");
- 	latestPrice_NUS: exchange.getLatestPrice("nus");
- 	highestBidPrice_NUS: exchange.getHighestBidPrice("nus");
- 	lowestAskPrice_NUS: exchange.getLowestAskPrice("nus");
- 	latestPrice_NTU: exchange.getLatestPrice("ntu");
- 	highestBidPrice_NTU: exchange.getHighestBidPrice("ntu");
- 	lowestAskPrice_NTU: exchange.getLowestAskPrice("ntu");
-
- 	*/
-
- 	res.render('current', {
- 		latestPrice_SMU: 0,
- 		highestBidPrice_SMU: 0,
- 		lowestAskPrice_SMU: 0,
- 		latestPrice_NUS: 0,
- 		highestBidPrice_NUS: 0,
- 		lowestAskPrice_NUS: 0,
- 		latestPrice_NTU: 0,
- 		highestBidPrice_NTU: 0,
- 		lowestAskPrice_NTU: 0
+ 	exchange.getLatestPrice("smu", function(err, price){
+ 		latestPrice_SMU = price;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
  	});
+
+ 	exchange.getHighestBidPrice("smu", function(err,price){
+ 		highestBidPrice_SMU = price;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+ 	});
+
+
+ 	exchange.getLowestAskPrice("smu", function(err,price){
+ 		lowestAskPrice_SMU = price;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+ 	});
+
+ 	exchange.getLatestPrice("nus", function(err, price){
+ 		latestPrice_NUS = price;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+ 	});
+
+ 	exchange.getHighestBidPrice("nus", function(err,price){
+ 		highestBidPrice_NUS = price;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+ 	});
+
+
+ 	exchange.getLowestAskPrice("nus", function(err,price){
+ 		lowestAskPrice_NUS = price;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+ 	});
+
+ 	exchange.getLatestPrice("ntu", function(err, price){
+ 		latestPrice_NTU = price;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+ 	});
+
+ 	exchange.getHighestBidPrice("ntu", function(err,price){
+ 		highestBidPrice_NTU = price;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+ 	});
+
+
+ 	exchange.getLowestAskPrice("ntu", function(err,price){
+ 		lowestAskPrice_NTU = price;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+ 	});
+
+ 	
+	function finalNext(){
+	 	res.render('current', {
+	 		latestPrice_SMU: latestPrice_SMU,
+	 		highestBidPrice_SMU: highestBidPrice_SMU,
+	 		lowestAskPrice_SMU: lowestAskPrice_SMU,
+	 		latestPrice_NUS: latestPrice_NUS,
+	 		highestBidPrice_NUS: highestBidPrice_NUS,
+	 		lowestAskPrice_NUS: lowestAskPrice_NUS,
+	 		latestPrice_NTU: latestPrice_NTU,
+	 		highestBidPrice_NTU: highestBidPrice_NTU,
+	 		lowestAskPrice_NTU: lowestAskPrice_NTU
+	 	});
+ 	}
  }
 
  function displayOrdersPage(req,res){

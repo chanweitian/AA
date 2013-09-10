@@ -242,6 +242,36 @@ var getAllCreditRemainingForDisplay = function(next) {
 
 
 
+// updates either latestPriceForSmu, latestPriceForNus or latestPriceForNtu
+// based on the MatchedTransaction object passed in
+var getLatestPrice = function(stock, next) {
+	console.log("get latest price from DB");
+	if (stock == "smu") {
+		next(null,20);
+	} else if (stock == "nus") {
+		next(null,30);
+	} else if (stock == "ntu") {
+		next(null,40);
+	}
+	//cannot find stock pass error
+	//next(err,null);
+}
+
+// returns the highest bid for a particular stock
+// return -1 if there is no bid at all
+var getHighestBidPrice = function(stock, next) {
+	console.log("get highest bid price from DB stock: "+ stock);
+	next(null,30);
+}
+
+
+// returns the lowest ask for a particular stock
+// returns -1 if there is no ask at all
+var getLowestAskPrice = function(stock, next) {
+	console.log("get lowest ask price from DB stock: "+ stock);
+	next(null,50);
+}
+
 // call this to append all matched transactions in matchedTransactions to log file and clear matchedTransactions
 var logMatchedTransactions = function() {
 
@@ -280,84 +310,6 @@ var logMatchedTransactions = function() {
 }
 
  
-
- 
-// returns the highest bid for a particular stock
-// return -1 if there is no bid at all
-ExchangeBean.prototype.getHighestBidPrice = function(stock) {
-	var highestBid = this.getHighestBid(stock);
-	if (highestBid === undefined) {
-		return -1;
-	} else {
-		return highestBid.getPrice();
-	}
-}
-
-// retrieve unfulfiled current (highest) bid for a particular stock
-// return null if there is no unfulfiled bid for this stock
-ExchangeBean.prototype.getHighestBid = function(stock) {
-	var highestBid = new bidModule.Bid(undefined, 0, undefined);
-	for(var i = 0; i < this.unfulfilledBids.length; i++) {
-		var bid = this.unfulfilledBids[i];
-		if (bid.getStock() == stock && bid.getPrice() >= highestBid.getPrice()) {
-			// if there are 2 bids of the same amount, the earlier one is considered the highest bid
-			if (bid.getPrice() == highestBid.getPrice()) {
-				if (bid.getDate().getTime() < highestBid.getDate().getTime()) {
-					highestBid = bid;
-				}
-			} else {
-				highestBid = bid;
-			}
-		} 
-	}
-	if (highestBid.getUserId() === undefined) {
-		return undefined;
-	}
-	return highestBid;
-}
-
-// returns the lowest ask for a particular stock
-// returns -1 if there is no ask at all
-ExchangeBean.prototype.getLowestAskPrice = function(stock) {
-	var lowestAsk = this.getLowestAsk(stock);
-	if (lowestAsk === undefined) {
-		return -1;
-	} else {
-		return lowestAsk.getPrice();
-	}
-}
-
-// retrieve unfulfiled current (lowest) ask for a particular stock
-// returns null if there is no unfulfiled asks for this stock
-ExchangeBean.prototype.getLowestAsk = function(stock) {
-	var lowestAsk = new askModule.Ask(undefined, Number.MAX_VALUE, undefined);
-	for (var i = 0; i < this.unfulfilledAsks.length; i++) {
-		var ask = this.unfulfilledAsks[i];
-		if (ask.getStock() == stock && ask.getPrice() <= lowestAsk.getPrice()) {
-			// there are 2 asks of the same ask amount, the earlier one is considered the highest ask
-			if (ask.getPrice() == lowestAsk.getPrice()) {
-				//compares dates
-				if (ask.getDate().getTime() < lowestAsk.getDate().getTime()) {
-					lowestAsk = ask;
-				}
-			}  else {
-				lowestAsk = ask;
-			}
-		}
-	}
-	if (lowestAsk.getUserId() === undefined) {
-		return undefined;
-	}
-	return lowestAsk;
-}
-
-
-
-
-
-
-
-
 // call this to append all rejected buy orders to log file
 ExchangeBean.prototype.logRejectedBuyOrder = function(bid) {
 	fs.appendFile(this.REJECTED_BUY_ORDERS_LOG_FILE, bid.toString() + "\n", function(err) {
@@ -373,24 +325,6 @@ ExchangeBean.prototype.logRejectedBuyOrder = function(bid) {
 
 
 
-
-
-
-
-// updates either latestPriceForSmu, latestPriceForNus or latestPriceForNtu
-// based on the MatchedTransaction object passed in
-ExchangeBean.prototype.getLatestPrice = function(stock) {
-	if (stock == "smu") {
-		return this.latestPriceForSmu;
-	} else if (stock == "nus") {
-		return this.latestPriceForNus;
-	} else if (stock = "ntu") {
-		return this.latestPriceForNtu;
-	}
-	return -1 // no such stock
-}
-
-
 */
 
 
@@ -403,6 +337,9 @@ module.exports.placeNewAskAndAttemptMatch = placeNewAskAndAttemptMatch;
 module.exports.getUnfulfilledBidsForDisplay = getUnfulfilledBidsForDisplay;
 module.exports.getUnfulfilledAsks = getUnfulfilledAsks;
 module.exports.getAllCreditRemainingForDisplay = getAllCreditRemainingForDisplay;
+module.exports.getLatestPrice = getLatestPrice;
+module.exports.getHighestBidPrice = getHighestBidPrice;
+module.exports.getLowestAskPrice = getLowestAskPrice;
 
 
 
