@@ -6,13 +6,6 @@ function Ask (stock, price, userId) {
  	this.date = new Date();
 }
 
-Ask.prototype.Ask = function (stock, price, userId) {
- 	this.stock = stock;
- 	this.price = price;
- 	this.userId = userId;
- 	this.date = new Date();
-};
-
 Ask.prototype.getStock = function(){
 	return this.stock;
 }

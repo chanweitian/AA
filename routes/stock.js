@@ -56,13 +56,13 @@ function processSell(req,res){
 
 	var newAsk = new askModule.Ask(stock, askPrice, user_id);
 
- 	//exchange.placeNewAskAndAttemptMatch(newAsk);
-
- 	res.render('sellSuccess', {
- 		user_id: req.session.user_id,
- 		stock: req.session.stock,
- 		askPrice: req.session.askPrice
- 	});;
+ 	exchange.placeNewAskAndAttemptMatch(newAsk, function(err){
+ 		res.render('sellSuccess', {
+	 		user_id: req.session.user_id,
+	 		stock: stock,
+	 		askPrice: askPrice
+ 		});
+ 	});
  }
 
  function displayCurrentPage(req,res){
@@ -96,24 +96,91 @@ function processSell(req,res){
 
  function displayOrdersPage(req,res){
 
- /*	unfulfilledBids_SMU:exchange.getUnfulfilledBidsForDisplay("smu");
- 	unfulfilledAsks_SMU:exchange.getUnfulfilledAsks("smu");
- 	unfulfilledBids_NUS:exchange.getUnfulfilledBidsForDisplay("nus");
- 	unfulfilledAsks_NUS:exchange.getUnfulfilledAsks("nus");
- 	unfulfilledBids_NTU:exchange.getUnfulfilledBidsForDisplay("ntu");
- 	unfulfilledAsks_NTU:exchange.getUnfulfilledAsks("ntu");
- 	creditRemaining:exchange.getAllCreditRemainingForDisplay();
+ 	var TOTAL_COUNTER = 7;
+ 	var counter = 0;
+ 	var unfulfilledBids_SMU;
+ 	var unfulfilledAsks_SMU;
+ 	var unfulfilledBids_NUS;
+	var unfulfilledAsks_NUS;
+	var unfulfilledBids_NTU;
+	var unfulfilledAsks_NTU;
+	var creditRemaining;
 
-*/
- 	res.render('viewOrders', {
- 		unfulfilledBids_SMU:0,
- 		unfulfilledAsks_SMU:0,
- 		unfulfilledBids_NUS:0,
- 		unfulfilledAsks_NUS:0,
- 		unfulfilledBids_NTU:0,
- 		unfulfilledAsks_NTU:0,
- 		creditRemaining:0
+
+
+ 	exchange.getUnfulfilledBidsForDisplay("smu", function(err, list){
+ 		unfulfilledBids_SMU = list.result;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
  	});
+	
+	exchange.getUnfulfilledAsks("smu", function(err, list){
+		unfulfilledAsks_SMU = list.result;
+		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+	});
+
+	exchange.getUnfulfilledBidsForDisplay("nus", function(err, list){
+ 		unfulfilledBids_NUS = list.result;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+ 	});
+	
+	exchange.getUnfulfilledAsks("nus", function(err, list){
+		unfulfilledAsks_NUS = list.result;
+		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+	});
+
+ 	exchange.getUnfulfilledBidsForDisplay("ntu", function(err, list){
+ 		unfulfilledBids_NTU = list.result;
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+ 	});
+	
+	exchange.getUnfulfilledAsks("ntu", function(err, list){
+		unfulfilledAsks_NTU = list.result;
+		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+	});
+
+ 	exchange.getAllCreditRemainingForDisplay(function (err,list){
+ 		creditRemaining = list;
+ 		console.log("creditRemaining: "+creditRemaining[1].id);
+
+ 		counter++;
+ 		if (counter == TOTAL_COUNTER){
+ 			finalNext();
+ 		}
+ 	});
+
+	
+
+	function finalNext(){
+		console.log("rendering view: "+unfulfilledBids_SMU[1]);
+	 	
+	 	res.render('viewOrders', {
+	 		unfulfilledBids_SMU:unfulfilledBids_SMU,
+	 		unfulfilledAsks_SMU:unfulfilledAsks_SMU,
+	 		unfulfilledBids_NUS:unfulfilledBids_NUS,
+	 		unfulfilledAsks_NUS:unfulfilledAsks_NUS,
+	 		unfulfilledBids_NTU:unfulfilledBids_NTU,
+	 		unfulfilledAsks_NTU:unfulfilledAsks_NTU,
+	 		creditRemaining:creditRemaining
+	 	});
+ 	}
  }
 
  module.exports.displayBuyPage = displayBuyPage;

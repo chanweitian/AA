@@ -1,0 +1,32 @@
+  <!-- unfulfilled bids of SMU -->
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>For SMU</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Unfulfilled Bids (Buy Orders)</td>
+                        <td>
+                        <% for(var i=0; i<unfulfilledBids_SMU.length; i++) {%>
+                            <%= unfulfilledBids_SMU[i] %></br>
+                        <% } %>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Unfulfilled Asks (Sell Orders)</td>
+                        <td></td>
+                    </tr>
+
+                </tbody>
+            </table>
+    <hr/>
+    Functions available:<br/>
+    <ul>
+        <li><a href="buy">Buy</a></li>
+        <li><a href="sell">Sell</a></li>
+        <li><a href="logout">Log out</a></li>
+        <li><a href="current">Current stats</a></li>
+        <li><a href="viewOrders">Unfulfilled orders</a></li>
+    </ul>

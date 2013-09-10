@@ -1,29 +1,20 @@
 // import
 var bidModule = require("./Bid");
 var askModule = require("./Ask");
-//var matchedTransactionModule = require("./MatchedTransaction");
+var matchedTransactionModule = require("./MatchedTransaction");
 
 var addUnfulfilledBid = function(newBid){
 	console.log("adding bid");
 } 
 
-
-
-var retrieveAllAsks = function( newBid, next){
-	console.log("Searching for all ask with stock: "+newBid.getStock());
-
-	//log on to database and retrieve array of ask
-	var askList = {};
-
-	next(null, askList);
+var addUnfulfilledAsk = function(newAsk){
+	console.log("adding ask");
 }
 
-
-var findLowestAsk = function(askList, next){
+var getLowestAsk = function(newBid, next){
 	console.log("Searching for the lowest ask");
 	var lowestAsk = new askModule.Ask("smu",30,"wt.chan.2011");
 	//var lowestAsk = null;
-
 	next(null, lowestAsk)
 }
 
@@ -59,10 +50,7 @@ var updateLatestPrice = function(matched) {
 	}
 }
 
-
-
-
-var attemptMatch = function(err, newBid, lowestAsk, next){
+var attemptBidMatch = function(err, newBid, lowestAsk, next){
 	// step 5: check if there is a match.
 	// A match happens if the highest bid is bigger or equal to the lowest ask
 	if (newBid.getPrice() >= lowestAsk.getPrice()) {
@@ -70,49 +58,89 @@ var attemptMatch = function(err, newBid, lowestAsk, next){
 		removeUnfulfilledBid(newBid);
 		removeUnfulfilliedAsk(lowestAsk)
 		// this is a BUYING trade - the transaction happens at the higest bid's timestamp, and the transaction price happens at the lowest ask
-		//var match = new matchedTransactionModule.MatchedTransaction(highestBid, lowestAsk, highestBid.getDate(), lowestAsk.getPrice());
-		//this.matchedTransactions.push(match);
+		var match = new matchedTransactionModule.MatchedTransaction(newBid, lowestAsk, newBid.getDate(), lowestAsk.getPrice());
+		addMatchedTransaction(match);	
+		// to be included here: inform Back Office Server of match
+		// to be done in v1.0
+		updateLatestPrice(match);
+		logMatchedTransactions();
+	}
+	next();
+}
+
+// call this method immediatley when a new bid (buying order) comes in
+// this method returns false if this buy order has been rejected because of a credit limit breach
+// it returns true if the bid has been successfully added
+var placeNewBidAndAttemptMatch = function(newBid, next) {
+	validateCreditLimit(newBid, function(err, okToContinue){
+		if (!okToContinue) {
+			console.log("bid unsuccessful - not enough credit");
+			next(null,false);
+		} 
+		// step 1: insert new bid into unfulfilledBids
+		addUnfulfilledBid(newBid);
+		// step 2: check if there is any unfulfilled asks (sell orders) for the new bid's stock. if not, just return
+	    // count keeps track of the number of unfulfilled asks for this stock
+	    getLowestAsk(newBid, function(err, lowestAsk){	
+    		attemptBidMatch(err, newBid, lowestAsk, function(err, matchStatus){ 
+    			if (!err){
+    				console.log("bid is successuful");
+    				next(null,true);
+    			} else {
+    				console.log("error occured");
+    				next(err, null);
+    			}
+    		});
+	    });
+	});
+}
+
+
+var attemptAskMatch = function(err, newAsk, highestBid, next){
+	if (newAsk.getPrice() >= highestBid.getPrice()) {
+		// a match is found
+		removeUnfulfilledBid(highestBid);
+		removeUnfulfilliedAsk(newAsk)
+		// this is a SELLING trade - the transaction happens at the lowest ask's timestamp, and the transaction price happens at the highest bid
+		var match = new matchedTransactionModule.MatchedTransaction(highestBid, newAsk, newAsk.getDate(), highestBid.getPrice());
+		addMatchedTransaction(match);
 		
 		// to be included here: inform Back Office Server of match
 		// to be done in v1.0
-		//updateLatestPrice(match);
+		updateLatestPrice(match);
 		logMatchedTransactions();
 	}
 	next();
 }
 
 
-var placeNewBidAndAttemptMatch = function(newBid, next) {
-
-	validateCreditLimit(newBid, function(err, okToContinue){
-
-		if (!okToContinue) {
-			console.log("bid unsuccessful - not enough credit");
-			next(null,false);
-		}
-
-		// step 1: insert new bid into unfulfilledBids
-		addUnfulfilledBid(newBid);
-
-		// step 2: check if there is any unfulfilled asks (sell orders) for the new bid's stock. if not, just return
-	    // count keeps track of the number of unfulfilled asks for this stock
-	    retrieveAllAsks(newBid, function(err, askList){
-	    	findLowestAsk(askList, function(err, lowestAsk ){
-	    		attemptMatch(err, newBid, lowestAsk, function(err, matchStatus){ 
-	    			if (!err){
-	    				console.log("bid is successuful");
-	    				next(null,true);
-	    			} else {
-	    				console.log("error occured");
-	    				next(err, null);
-	    			}
-	    		});
-	    	});
-	    });
-
-	});
+var getHighestBid = function(newAsk, next){
+	console.log("Searching for the highest bid");
+	var highestBid = new bidModule.Bid("smu",30,"wt.chan.2011");
+	//var lowestAsk = null;
+	next(null, highestBid)
 }
 
+// call this method immediatley when a new ask (selling order) comes in
+var placeNewAskAndAttemptMatch = function(newAsk, next) {
+	// step 1: insert nehighestw ask into unfulfilledAsks
+	addUnfulfilledAsk(newAsk);
+	
+	// step 2: identify the current/highest bid in unfulfilledBids of the same stock
+	getHighestBid(newAsk, function(err, highestBid){
+		// step 3: check if there is a match.
+		// A match happens if the lowest ask is <= highest bid
+		attemptAskMatch(err, newAsk, highestBid, function(err, matchStatus){ 
+			if (!err){
+				console.log("ask is successuful");
+				next(null);
+			} else {
+				console.log("error occured");
+				next(err);
+	    	}
+	    });
+	});
+}
 
 // check if a buyer is eligible to place an order based on his credit limit
 // if he is eligible, this method adjusts his credit limit and returns true
@@ -147,6 +175,69 @@ var getCreditRemaining = function(buyerUserId, next) {
 		creditRemaining[buyerUserId] = this.DAILY_CREDIT_LIMIT_FOR_BUYERS;
 	}*/
 	next(undefined,99999999);
+}
+
+
+
+ // returns a String of unfulfilled bids for a particular stocks
+ // returns an empty string if no such bid
+ // bods are separated by <br> for display on HTML page
+ var getUnfulfilledBidsForDisplay = function(stock, next) {
+	console.log("retrieving all bids: "+stock);
+	var b1 = new bidModule.Bid("smu",10,"b1");
+	var b2 = new bidModule.Bid("smu",10,"b2");
+	var b3 = new bidModule.Bid("smu",10,"b3");
+
+	var bidList = {
+		"result" : [
+			b1.toString(),
+			b2.toString(),
+			b3.toString()
+		]
+	}
+	next(null, bidList);
+
+ }
+
+  // return a String of unfilled asks for a particular stock
+ // returns an empty string if no such ask
+ // asks are separated by <br> for display on HTML page
+ var getUnfulfilledAsks = function(stock,next) {
+	console.log("retrieving all asks: "+stock);
+	var a1 = new askModule.Ask("smu",30,"a1");
+	var a2 = new askModule.Ask("smu",30,"a2");
+	var a3 = new askModule.Ask("smu",30,"a3");
+
+	var askList = {
+		"result" : [
+			a1.toString(),
+			a2.toString(),
+			a3.toString()
+		]
+	}
+	next(null, askList);
+ }
+
+
+
+var getAllCreditRemainingForDisplay = function(next) {
+	console.log("retrieving all credits:");
+
+	var u1 = {
+		id:"u1",
+		credit:50
+	};
+	var u2 = {
+		id:"u2",
+		credit:50
+	};
+	var u3 = {
+		id:"u3",
+		credit:50
+	};
+	var list = [u1,u2,u3];
+
+	next(null,list)
 }
 
 
@@ -188,37 +279,8 @@ var logMatchedTransactions = function() {
 	this.creditRemaining = [];
 }
 
- // returns a String of unfulfilled bids for a particular stocks
- // returns an empty string if no such bid
- // bods are separated by <br> for display on HTML page
- ExchangeBean.prototype.getUnfulfilledBidsForDisplay = function(stock) {
- 	var returnString = "";
- 	console.log(this.unfulfilledBids.length);
- 	for ( var i = 0; i < this.unfulfilledBids.length; i++) {
- 		var bid = this.unfulfilledBids[i];
-
- 		if (bid.getStock() == stock) {
- 			returnString = returnString + bid.toString() + "<br/>"; 
- 		}
- 	}
-
- 	return returnString;
- }
  
- // return a String of unfilled asks for a particular stock
- // returns an empty string if no such ask
- // asks are separated by <br> for display on HTML page
- ExchangeBean.prototype.getUnfulfilledAsks = function(stock) {
- 	var returnString = "";
- 	for (var i = 0; i < this.unfulfilledAsks.length; i++) {
- 		var ask = this.unfulfilledAsks[i];
- 		if (ask.getStock() == stock) {
- 			returnString = returnString + ask.toString() + "<br/>";
- 		}		
- 	}
 
- 	return returnString;
- }
  
 // returns the highest bid for a particular stock
 // return -1 if there is no bid at all
@@ -308,66 +370,11 @@ ExchangeBean.prototype.logRejectedBuyOrder = function(bid) {
 }
 
 
-// returns a string of HTML table rows code containing the list of user IDs and their remaining credits
-// this method is used by viewOrders.jsp for debugging purposes
-ExchangeBean.prototype.getAllCreditRemainingForDisplay = function() {
-	var returnString = "";
-
-	for (var key in this.creditRemaining) {
-		var value = this.creditRemaining[key];
-		returnString = returnString + "<tr><td>" + key + "</td><td>" + value + "</td></tr>";
-	}
-	return returnString;
-}
 
 
 
-// call this method immediatley when a new bid (buying order) comes in
-// this method returns false if this buy order has been rejected because of a credit limit breach
-// it returns true if the bid has been successfully added
 
 
-// call this method immediatley when a new ask (selling order) comes in
-ExchangeBean.prototype.placeNewAskAndAttemptMatch = function(newAsk) {
-	// step 1: insert new ask into unfulfilledAsks
-	this.unfulfilledAsks.push(newAsk);
-	
-	// step 2: check if there is any unfulfilled bids (buy orders) for the new ask's stock. if not, just return
-    // count keeps track of the number of unfulfilled bids for this stock
-    var count = 0;
-    for (var i = 0; i < this.unfulfilledBids.length; i++) {
-    	if (this.unfulfilledBids[i].getStock() == newAsk.getStock()) {
-    		count++;
-    	}
-    }
-    if (count == 0) {
-		return; //true; // no unfulfilled asks of the same stock
-	}
-	
-	 // step 3: identify the current/highest bid in unfulfilledBids of the same stock
-	 var highestBid = this.getHighestBid(newAsk.getStock());
-	 
-	 // step 4: identify the current/lowest ask in unfulfilledAsks of the same stock
-	 var lowestAsk = this.getLowestAsk(newAsk.getStock());
-	 
-	 // step 5: check if there is a match.
-    // A match happens if the lowest ask is <= highest bid
-    if (lowestAsk.getPrice() <= highestBid.getPrice()) {
-		// a match is found
-		this.unfulfilledBids.splice(highestBid, 1);
-		this.unfulfilledAsks.splice(lowestAsk, 1);
-		// this is a SELLING trade - the transaction happens at the lowest ask's timestamp, and the transaction price happens at the highest bid
-		var match = new matchedTransactionModule.MatchedTransaction(highestBid, lowestAsk, lowestAsk.getDate(), highestBid.getPrice());
-		this.matchedTransactions.push(match);
-		
-		// to be included here: inform Back Office Server of match
-		// to be done in v1.0
-		this.updateLatestPrice(match);
-		this.logMatchedTransactions();
-	}
-	
-	//return true;
-}
 
 
 // updates either latestPriceForSmu, latestPriceForNus or latestPriceForNtu
@@ -385,4 +392,18 @@ ExchangeBean.prototype.getLatestPrice = function(stock) {
 
 
 */
+
+
+
+
+
+
 module.exports.placeNewBidAndAttemptMatch = placeNewBidAndAttemptMatch;
+module.exports.placeNewAskAndAttemptMatch = placeNewAskAndAttemptMatch;
+module.exports.getUnfulfilledBidsForDisplay = getUnfulfilledBidsForDisplay;
+module.exports.getUnfulfilledAsks = getUnfulfilledAsks;
+module.exports.getAllCreditRemainingForDisplay = getAllCreditRemainingForDisplay;
+
+
+
+

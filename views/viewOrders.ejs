@@ -8,11 +8,19 @@
                 <tbody>
                     <tr>
                         <td>Unfulfilled Bids (Buy Orders)</td>
-                        <td><%=unfulfilledBids_SMU%></td>
+                        <td>
+                        <% for(var i=0; i<unfulfilledBids_SMU.length; i++) {%>
+                            <%= unfulfilledBids_SMU[i] %></br>
+                        <% } %>
+                        </td>
                     </tr>
                     <tr>
                         <td>Unfulfilled Asks (Sell Orders)</td>
-                        <td><%=unfulfilledAsks_SMU%></td>
+                        <td>
+                        <% for(var i=0; i<unfulfilledAsks_SMU.length; i++) {%>
+                            <%= unfulfilledAsks_SMU[i] %></br>
+                        <% } %>
+                        </td>
                     </tr>
 
                 </tbody>
@@ -30,13 +38,20 @@
                 <tbody>
                     <tr>
                         <td>Unfulfilled Bids (Buy Orders)</td>
-                        <td><%=unfulfilledBids_NUS%></td>
+                        <td>
+                        <% for(var i=0; i<unfulfilledBids_NUS.length; i++) {%>
+                            <%= unfulfilledBids_NUS[i] %></br>
+                        <% } %>
+                        </td>
                     </tr>
                     <tr>
                         <td>Unfulfilled Asks (Sell Orders)</td>
-                        <td><%=unfulfilledAsks_NUS%></td>
+                        <td>
+                        <% for(var i=0; i<unfulfilledAsks_NUS.length; i++) {%>
+                            <%= unfulfilledAsks_NUS[i] %></br>
+                        <% } %>
+                        </td>
                     </tr>
-
                 </tbody>
             </table>
 
@@ -52,11 +67,19 @@
                 <tbody>
                     <tr>
                         <td>Unfulfilled Bids (Buy Orders)</td>
-                        <td><%=unfulfilledBids_NTU%></td>
+                        <td>
+                        <% for(var i=0; i<unfulfilledBids_NTU.length; i++) {%>
+                            <%= unfulfilledBids_NTU[i] %></br>
+                        <% } %>
+                        </td>
                     </tr>
                     <tr>
                         <td>Unfulfilled Asks (Sell Orders)</td>
-                        <td><%=unfulfilledAsks_NTU%></td>
+                        <td>
+                        <% for(var i=0; i<unfulfilledAsks_NTU.length; i++) {%>
+                            <%= unfulfilledAsks_NTU[i] %></br>
+                        <% } %>
+                        </td>
                     </tr>
 
                 </tbody>
@@ -74,8 +97,16 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <%=creditRemaining%>
+                    
+                    <% for(var i=0; i<creditRemaining.length; i++) {%>
+                    <tr>
+                    <td><%= creditRemaining[i].id %></td>
+                    <td><%= creditRemaining[i].credit %></td>
+                    </tr>
+                    <% } %>
+                    
                 </tbody>
+
             </table>
     <hr/>
     Functions available:<br/>
