@@ -1,9 +1,10 @@
 // constructor function
-function Ask (stock, price, userId) {
+function Ask (stock, price, userId, date, sellId) {
  	this.stock = stock;
  	this.price = price;
  	this.userId = userId;
- 	this.date = new Date();
+ 	this.date = date;
+	this.sellId = sellId;
 }
 
 Ask.prototype.getStock = function(){
@@ -20,6 +21,10 @@ Ask.prototype.getUserId = function(){
 
 Ask.prototype.getDate = function(){
 	return this.date;
+}
+
+Ask.prototype.getSellId = function(){
+	return this.sellId;
 }
 
 Ask.prototype.toString = function(){

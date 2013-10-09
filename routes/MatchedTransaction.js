@@ -1,10 +1,10 @@
 // constructor function
-function MatchedTransaction (bid, ask, date, price) {
- 	this.bid = bid;
- 	this.ask = ask;
- 	this.date = date;
- 	this.price = price;
- 	this.stock = bid.getStock();
+function MatchedTransaction (buyerId, sellerId, date, price, stock) {
+ 	this.buyerId = buyerId;
+ 	this.sellerId = sellerId;
+	this.date = date;
+	this.price = price;
+	this.stock = stock;
 }
 
 MatchedTransaction.prototype.getStock = function(){
@@ -16,11 +16,11 @@ MatchedTransaction.prototype.getPrice = function(){
 }
 
 MatchedTransaction.prototype.getBuyerId = function(){
-	return this.bid.getUserId;
+	return this.buyerId;
 }
 
 MatchedTransaction.prototype.getSellerId = function(){
-	return this.ask.getUserId;
+	return this.sellerId;
 }
 
 MatchedTransaction.prototype.getDate = function(){
@@ -28,7 +28,7 @@ MatchedTransaction.prototype.getDate = function(){
 }
 
 MatchedTransaction.prototype.toString = function(){
-	return "stock: " + this.stock + ", amt: " + this.price + ", bidder userId: " + this.bid.getUserId() + ", seller userId: " + this.ask.getUserId() + ", date: " + this.date;
+	return "stock: " + this.stock + ", amt: " + this.price + ", bidder userId: " + this.buyerId + ", seller userId: " + this.sellerId + ", date: " + this.date;
 }
 
 module.exports.MatchedTransaction = MatchedTransaction;

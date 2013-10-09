@@ -1,11 +1,11 @@
 // constructor function
-function Bid (stock, price, userId) {
+function Bid (stock, price, userId, date, buyId) {
  	this.stock = stock;
  	this.price = price;
  	this.userId = userId;
- 	this.date = new Date();
+ 	this.date = date;
+	this.buyId = buyId;
 }
-
 
 Bid.prototype.getStock = function(){
 	return this.stock;
@@ -21,6 +21,10 @@ Bid.prototype.getUserId = function(){
 
 Bid.prototype.getDate = function(){
 	return this.date;
+}
+
+Bid.prototype.getBuyId = function(){
+	return this.buyId;
 }
 
 Bid.prototype.toString = function(){

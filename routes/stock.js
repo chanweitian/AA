@@ -1,7 +1,7 @@
  var bidModule = require("./Bid");
  var askModule = require("./Ask");
  var exchange = require("./exchange");
-
+ 
  function displayBuyPage(req, res) {
  	res.render('buy',{user_id: req.session.user_id});
  }
@@ -15,8 +15,7 @@
  	 to replace with 
 	- boolean bidIsAccepted */
 
-	var newBid = new bidModule.Bid(stock, bidPrice, user_id);
-
+	var newBid = new bidModule.Bid(stock, bidPrice, user_id, new Date(), 0);
 	exchange.placeNewBidAndAttemptMatch(newBid, function(err, bidIsAccepted){
 		req.session.stock = stock;
 		req.session.bidPrice = bidPrice;
@@ -54,7 +53,7 @@ function processSell(req,res){
 	var stock = req.body.stock;
 	var askPrice = req.body.askprice;
 
-	var newAsk = new askModule.Ask(stock, askPrice, user_id);
+	var newAsk = new askModule.Ask(stock, askPrice, user_id, new Date(), 0);
 
  	exchange.placeNewAskAndAttemptMatch(newAsk, function(err){
  		res.render('sellSuccess', {
@@ -180,12 +179,13 @@ function processSell(req,res){
 	var unfulfilledAsks_NUS;
 	var unfulfilledBids_NTU;
 	var unfulfilledAsks_NTU;
-	var creditRemaining;
+	var allUser;
+	var allCredit;
 
 
 
  	exchange.getUnfulfilledBidsForDisplay("smu", function(err, list){
- 		unfulfilledBids_SMU = list.result;
+ 		unfulfilledBids_SMU = list;
  		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -193,7 +193,7 @@ function processSell(req,res){
  	});
 	
 	exchange.getUnfulfilledAsks("smu", function(err, list){
-		unfulfilledAsks_SMU = list.result;
+		unfulfilledAsks_SMU = list;
 		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -201,7 +201,7 @@ function processSell(req,res){
 	});
 
 	exchange.getUnfulfilledBidsForDisplay("nus", function(err, list){
- 		unfulfilledBids_NUS = list.result;
+ 		unfulfilledBids_NUS = list;
  		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -209,7 +209,7 @@ function processSell(req,res){
  	});
 	
 	exchange.getUnfulfilledAsks("nus", function(err, list){
-		unfulfilledAsks_NUS = list.result;
+		unfulfilledAsks_NUS = list;
 		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -217,7 +217,7 @@ function processSell(req,res){
 	});
 
  	exchange.getUnfulfilledBidsForDisplay("ntu", function(err, list){
- 		unfulfilledBids_NTU = list.result;
+ 		unfulfilledBids_NTU = list;
  		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -225,17 +225,17 @@ function processSell(req,res){
  	});
 	
 	exchange.getUnfulfilledAsks("ntu", function(err, list){
-		unfulfilledAsks_NTU = list.result;
+		unfulfilledAsks_NTU = list;
 		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
  		}
 	});
 
- 	exchange.getAllCreditRemainingForDisplay(function (err,list){
- 		creditRemaining = list;
- 		console.log("creditRemaining: "+creditRemaining[1].id);
-
+ 	exchange.getAllCreditRemainingForDisplay(function (err, allUserList, allCreditList){
+ 		console.log("creditRemaining: "+allUserList.length);
+		allUser = allUserList;
+		allCredit = allCreditList;
  		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -254,10 +254,17 @@ function processSell(req,res){
 	 		unfulfilledAsks_NUS:unfulfilledAsks_NUS,
 	 		unfulfilledBids_NTU:unfulfilledBids_NTU,
 	 		unfulfilledAsks_NTU:unfulfilledAsks_NTU,
-	 		creditRemaining:creditRemaining
+			allUser:allUser,
+			allCredit:allCredit
 	 	});
  	}
  }
+
+function processEndDay(req,res){
+ 	exchange.processEndDay(function() {
+		res.render('endTradingDay');
+	});
+}
 
  module.exports.displayBuyPage = displayBuyPage;
  module.exports.processBuy = processBuy;
@@ -270,3 +277,5 @@ function processSell(req,res){
  module.exports.displayCurrentPage = displayCurrentPage;
 
  module.exports.displayOrdersPage = displayOrdersPage;
+
+ module.exports.processEndDay = processEndDay;
