@@ -1,7 +1,7 @@
  var bidModule = require("./Bid");
  var askModule = require("./Ask");
  var exchange = require("./exchange");
-
+ 
  function displayBuyPage(req, res) {
  	res.render('buy',{user_id: req.session.user_id});
  }
@@ -16,7 +16,7 @@
 	- boolean bidIsAccepted */
 
 	var newBid = new bidModule.Bid(stock, bidPrice, user_id);
-
+	
 	exchange.placeNewBidAndAttemptMatch(newBid, function(err, bidIsAccepted){
 		req.session.stock = stock;
 		req.session.bidPrice = bidPrice;
@@ -185,7 +185,7 @@ function processSell(req,res){
 
 
  	exchange.getUnfulfilledBidsForDisplay("smu", function(err, list){
- 		unfulfilledBids_SMU = list.result;
+ 		unfulfilledBids_SMU = list;
  		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -193,7 +193,7 @@ function processSell(req,res){
  	});
 	
 	exchange.getUnfulfilledAsks("smu", function(err, list){
-		unfulfilledAsks_SMU = list.result;
+		unfulfilledAsks_SMU = list;
 		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -201,7 +201,7 @@ function processSell(req,res){
 	});
 
 	exchange.getUnfulfilledBidsForDisplay("nus", function(err, list){
- 		unfulfilledBids_NUS = list.result;
+ 		unfulfilledBids_NUS = list;
  		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -209,7 +209,7 @@ function processSell(req,res){
  	});
 	
 	exchange.getUnfulfilledAsks("nus", function(err, list){
-		unfulfilledAsks_NUS = list.result;
+		unfulfilledAsks_NUS = list;
 		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -217,7 +217,7 @@ function processSell(req,res){
 	});
 
  	exchange.getUnfulfilledBidsForDisplay("ntu", function(err, list){
- 		unfulfilledBids_NTU = list.result;
+ 		unfulfilledBids_NTU = list;
  		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -225,7 +225,7 @@ function processSell(req,res){
  	});
 	
 	exchange.getUnfulfilledAsks("ntu", function(err, list){
-		unfulfilledAsks_NTU = list.result;
+		unfulfilledAsks_NTU = list;
 		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
@@ -234,7 +234,7 @@ function processSell(req,res){
 
  	exchange.getAllCreditRemainingForDisplay(function (err,list){
  		creditRemaining = list;
- 		console.log("creditRemaining: "+creditRemaining[1].id);
+ 		console.log("creditRemaining: "+creditRemaining.length);
 
  		counter++;
  		if (counter == TOTAL_COUNTER){

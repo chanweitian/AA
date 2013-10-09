@@ -6,6 +6,14 @@ function Ask (stock, price, userId) {
  	this.date = new Date();
 }
 
+// constructor function
+function Ask (stock, price, userId, date) {
+ 	this.stock = stock;
+ 	this.price = price;
+ 	this.userId = userId;
+ 	this.date = date;
+}
+
 Ask.prototype.getStock = function(){
 	return this.stock;
 }

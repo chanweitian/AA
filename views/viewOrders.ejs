@@ -100,8 +100,8 @@
                     
                     <% for(var i=0; i<creditRemaining.length; i++) {%>
                     <tr>
-                    <td><%= creditRemaining[i].id %></td>
-                    <td><%= creditRemaining[i].credit %></td>
+                    <td><%= creditRemaining[i]['userID'] %></td>
+                    <td><%= creditRemaining[i]['remainingCredit'] %></td>
                     </tr>
                     <% } %>
                     

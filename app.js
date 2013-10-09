@@ -43,14 +43,14 @@ app.get('/buyFail', authentication.checkAuth,stock.displayBuyFailPage);
 app.get('/sell', authentication.checkAuth,stock.displaySellPage);
 app.post('/processSell',authentication.checkAuth,stock.processSell);
 
-app.get('/current',authentication.checkAuth,stock.displayCurrentPage);
+app.get('/current',stock.displayCurrentPage);
 
 app.get('/viewOrders',authentication.checkAuth,stock.displayOrdersPage);
 
 //all other pages will get directed to login page
 app.get('*', authentication.displayLoginPage);
 
-
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));
 });
+

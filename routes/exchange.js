@@ -2,32 +2,37 @@
 var bidModule = require("./Bid");
 var askModule = require("./Ask");
 var matchedTransactionModule = require("./MatchedTransaction");
+var connection = require("./connection");
 
 var addUnfulfilledBid = function(newBid){
 	console.log("adding bid");
+	connection.addBuyOrder(newBid);
 } 
 
 var addUnfulfilledAsk = function(newAsk){
 	console.log("adding ask");
+	connection.addSellOrder(newAsk);
 }
 
-var getLowestAsk = function(newBid, next){
+var getLowestAsk = function(stockID, next){
 	console.log("Searching for the lowest ask");
-	var lowestAsk = new askModule.Ask("smu",30,"wt.chan.2011");
-	//var lowestAsk = null;
-	next(null, lowestAsk)
+	connection.getLowestAsk(stockID, function(lowestAsk) {
+		next(null, lowestAsk);
+	});
 }
 
 var removeUnfulfilledBid = function(bid){
 	console.log("removing bid "+bid.getStock());
+	connection.removeBuyOrder(bid);
 }
 
-var removeUnfulfilliedAsk = function(ask){
+var removeUnfulfilledAsk = function(ask){
 	console.log("removing ask "+ask.getStock());
-	console.log("Simultaing hanging function");
+	connection.removeSellOrder(ask);
+	/*console.log("Simultaing hanging function");
 	setTimeout(function() { 
 		console.log("Completed hanging function");
-	}, 1000);
+	}, 1000);*/
 }
 
 var addMatchedTransaction = function(match){
@@ -40,14 +45,7 @@ var updateLatestPrice = function(matched) {
 	console.log("updating the lastest price: "+matched.toString());
 	var stock = matched.getStock();
 	var price = matched.getPrice();
-	// update the correct attribute
-	if (stock == "smu") {
-		this.latestPriceForSmu = price;
-	} else if (stock == "nus") {
-		this.latestPriceForNus = price;
-	} else if (stock = "ntu") {
-		this.latestPriceForNtu = price;
-	}
+	connection.updateLatestPrice(stock, price);
 }
 
 var attemptBidMatch = function(err, newBid, lowestAsk, next){
@@ -55,8 +53,8 @@ var attemptBidMatch = function(err, newBid, lowestAsk, next){
 	// A match happens if the highest bid is bigger or equal to the lowest ask
 	if (newBid.getPrice() >= lowestAsk.getPrice()) {
 		// a match is found
-		removeUnfulfilledBid(newBid);
-		removeUnfulfilliedAsk(lowestAsk)
+		//removeUnfulfilledBid(newBid);
+		removeUnfulfilledAsk(lowestAsk)
 		// this is a BUYING trade - the transaction happens at the higest bid's timestamp, and the transaction price happens at the lowest ask
 		var match = new matchedTransactionModule.MatchedTransaction(newBid, lowestAsk, newBid.getDate(), lowestAsk.getPrice());
 		addMatchedTransaction(match);	
@@ -64,6 +62,8 @@ var attemptBidMatch = function(err, newBid, lowestAsk, next){
 		// to be done in v1.0
 		updateLatestPrice(match);
 		logMatchedTransactions();
+	} else {
+		addUnfulfilledBid(newBid);
 	}
 	next();
 }
@@ -76,22 +76,23 @@ var placeNewBidAndAttemptMatch = function(newBid, next) {
 		if (!okToContinue) {
 			console.log("bid unsuccessful - not enough credit");
 			next(null,false);
-		} 
-		// step 1: insert new bid into unfulfilledBids
-		addUnfulfilledBid(newBid);
-		// step 2: check if there is any unfulfilled asks (sell orders) for the new bid's stock. if not, just return
-	    // count keeps track of the number of unfulfilled asks for this stock
-	    getLowestAsk(newBid, function(err, lowestAsk){	
-    		attemptBidMatch(err, newBid, lowestAsk, function(err, matchStatus){ 
-    			if (!err){
-    				console.log("bid is successuful");
-    				next(null,true);
-    			} else {
-    				console.log("error occured");
-    				next(err, null);
-    			}
-    		});
-	    });
+		} else {
+			// step 1: insert new bid into unfulfilledBids
+			//addUnfulfilledBid(newBid);
+			// step 2: check if there is any unfulfilled asks (sell orders) for the new bid's stock. if not, just return
+			// count keeps track of the number of unfulfilled asks for this stock
+			getLowestAsk(newBid.getStock(), function(err, lowestAsk){	
+				attemptBidMatch(err, newBid, lowestAsk, function(err, matchStatus){ 
+					if (!err){
+						console.log("bid is successuful");
+						next(null,true);
+					} else {
+						console.log("error occured");
+						next(err, null);
+					}
+				});
+			});
+		}
 	});
 }
 
@@ -100,7 +101,7 @@ var attemptAskMatch = function(err, newAsk, highestBid, next){
 	if (newAsk.getPrice() >= highestBid.getPrice()) {
 		// a match is found
 		removeUnfulfilledBid(highestBid);
-		removeUnfulfilliedAsk(newAsk)
+		removeUnfulfilledAsk(newAsk)
 		// this is a SELLING trade - the transaction happens at the lowest ask's timestamp, and the transaction price happens at the highest bid
 		var match = new matchedTransactionModule.MatchedTransaction(highestBid, newAsk, newAsk.getDate(), highestBid.getPrice());
 		addMatchedTransaction(match);
@@ -114,11 +115,12 @@ var attemptAskMatch = function(err, newAsk, highestBid, next){
 }
 
 
-var getHighestBid = function(newAsk, next){
+var getHighestBid = function(stockID, next){
 	console.log("Searching for the highest bid");
-	var highestBid = new bidModule.Bid("smu",30,"wt.chan.2011");
+	connection.getHighestBid(stockID, function(highestBid) {
+		next(null, highestBid);
+	});
 	//var lowestAsk = null;
-	next(null, highestBid)
 }
 
 // call this method immediatley when a new ask (selling order) comes in
@@ -127,7 +129,7 @@ var placeNewAskAndAttemptMatch = function(newAsk, next) {
 	addUnfulfilledAsk(newAsk);
 	
 	// step 2: identify the current/highest bid in unfulfilledBids of the same stock
-	getHighestBid(newAsk, function(err, highestBid){
+	getHighestBid(newAsk.getStock(), function(err, highestBid){
 		// step 3: check if there is a match.
 		// A match happens if the lowest ask is <= highest bid
 		attemptAskMatch(err, newAsk, highestBid, function(err, matchStatus){ 
@@ -148,16 +150,23 @@ var placeNewAskAndAttemptMatch = function(newAsk, next) {
 var validateCreditLimit = function(bid, next) {
 	var totalPriceOfBid = bid.getPrice() * 1000; //each bid is for 1000 shares
 	
-	getCreditRemaining(bid.getUserId(), function (err, remainingCredit){
+	buyerId = bid.getUserId();
+	getCreditRemaining(buyerId, function (err, remainingCredit, newRecord){
 		var newRemainingCredit = remainingCredit - totalPriceOfBid;
 
 		if (newRemainingCredit < 0) {
 			// no go - log failed bid and return false
 			//this.logRejectedBuyOrder(bid);
 			next (null,false);
+			console.log("rejected");
 		} else {
+			console.log("approved");
 			// it's ok - adjust credit limit and return true
-			// this.creditRemaining[bid.getUserId()] = newRemainingCredit;
+			if (newRecord) {
+				connection.addUserCredit(buyerId, newRemainingCredit);
+			} else {
+				connection.updateUserCredit(buyerId, newRemainingCredit);
+			}
 			next (null,true);
 		}
 
@@ -169,12 +178,15 @@ var validateCreditLimit = function(bid, next) {
 var getCreditRemaining = function(buyerUserId, next) {
 	
 	console.log("checking "+buyerUserId+" creditLimit");
-/*
-	if (creditRemaining[buyerUserId] === undefined) {
-		// this buyer is not in the hash table yet. Hence create a new entry for him
-		creditRemaining[buyerUserId] = this.DAILY_CREDIT_LIMIT_FOR_BUYERS;
-	}*/
-	next(undefined,99999999);
+	connection.retrieveUserCredit(buyerUserId, function(userCredit) {
+		if (userCredit == null) {
+			// this buyer is not in the hash table yet. Hence create a new entry for him
+			next(undefined, 1000000, true);
+		} else {
+			next(undefined,userCredit, false);
+		}
+	});
+	
 }
 
 
@@ -184,18 +196,9 @@ var getCreditRemaining = function(buyerUserId, next) {
  // bods are separated by <br> for display on HTML page
  var getUnfulfilledBidsForDisplay = function(stock, next) {
 	console.log("retrieving all bids: "+stock);
-	var b1 = new bidModule.Bid("smu",10,"b1");
-	var b2 = new bidModule.Bid("smu",10,"b2");
-	var b3 = new bidModule.Bid("smu",10,"b3");
-
-	var bidList = {
-		"result" : [
-			b1.toString(),
-			b2.toString(),
-			b3.toString()
-		]
-	}
-	next(null, bidList);
+	connection.retrieveBuyOrders(stock,function(list) {
+		next(null,list);
+	});
 
  }
 
@@ -204,40 +207,18 @@ var getCreditRemaining = function(buyerUserId, next) {
  // asks are separated by <br> for display on HTML page
  var getUnfulfilledAsks = function(stock,next) {
 	console.log("retrieving all asks: "+stock);
-	var a1 = new askModule.Ask("smu",30,"a1");
-	var a2 = new askModule.Ask("smu",30,"a2");
-	var a3 = new askModule.Ask("smu",30,"a3");
-
-	var askList = {
-		"result" : [
-			a1.toString(),
-			a2.toString(),
-			a3.toString()
-		]
-	}
-	next(null, askList);
+	connection.retrieveSellOrders(stock,function(list) {
+		next(null,list);
+	});
  }
 
 
 
 var getAllCreditRemainingForDisplay = function(next) {
 	console.log("retrieving all credits:");
-
-	var u1 = {
-		id:"u1",
-		credit:50
-	};
-	var u2 = {
-		id:"u2",
-		credit:50
-	};
-	var u3 = {
-		id:"u3",
-		credit:50
-	};
-	var list = [u1,u2,u3];
-
-	next(null,list)
+	connection.retrieveAllUserCredit(function(allUserCredit) {
+		next(null,allUserCredit);
+	});
 }
 
 
@@ -246,22 +227,28 @@ var getAllCreditRemainingForDisplay = function(next) {
 // based on the MatchedTransaction object passed in
 var getLatestPrice = function(stock, next) {
 	console.log("get latest price from DB");
-	if (stock == "smu") {
-		next(null,20);
-	} else if (stock == "nus") {
-		next(null,30);
-	} else if (stock == "ntu") {
-		next(null,40);
-	}
+	connection.retrieveLatestPrice(stock, function(latestPrice) {
+		if (latestPrice == 0) {
+			next(null,"N/A");
+		} else {
+			next(null,latestPrice);
+		}
+	});
 	//cannot find stock pass error
 	//next(err,null);
 }
 
 // returns the highest bid for a particular stock
-// return -1 if there is no bid at all
+// return N/A there is no bid at all
 var getHighestBidPrice = function(stock, next) {
 	console.log("get highest bid price from DB stock: "+ stock);
-	next(null,30);
+	connection.getHighestBidPrice(stock, function(highestBid) {
+		if (highestBid == null) {
+			next(null,"N/A");
+		} else {
+			next(null,highestBid);
+		}
+	});
 }
 
 
@@ -269,7 +256,13 @@ var getHighestBidPrice = function(stock, next) {
 // returns -1 if there is no ask at all
 var getLowestAskPrice = function(stock, next) {
 	console.log("get lowest ask price from DB stock: "+ stock);
-	next(null,50);
+	connection.getLowestAskPrice(stock, function(lowestAsk) {
+		if (lowestAsk == null) {
+			next(null,"N/A");
+		} else {
+			next(null,lowestAsk);
+		}
+	});
 }
 
 // call this to append all matched transactions in matchedTransactions to log file and clear matchedTransactions
