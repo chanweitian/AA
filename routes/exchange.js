@@ -6,24 +6,16 @@ var connection = require("./connection");
 
 var addUnfulfilledBid = function(newBid, next){
 	console.log("adding bid");
-<<<<<<< HEAD
 	connection.addBuyOrder(newBid, function(stock) {
 		next(stock);
 	});
-=======
-	connection.addBuyOrder(newBid);
->>>>>>> 84707d54824231fdc2b732dfb59ba044f31039d8
 } 
 
 var addUnfulfilledAsk = function(newAsk, next){
 	console.log("adding ask");
-<<<<<<< HEAD
 	connection.addSellOrder(newAsk, function(stock) {
 		next(stock);
 	});
-=======
-	connection.addSellOrder(newAsk);
->>>>>>> 84707d54824231fdc2b732dfb59ba044f31039d8
 }
 
 var getLowestAsk = function(stockID, next){
@@ -67,11 +59,7 @@ var attemptBidMatch = function(err, newBid, lowestAsk, next){
 	if (lowestAsk!=null && newBid.getPrice() >= lowestAsk.getPrice()) {
 		// a match is found
 		//removeUnfulfilledBid(newBid);
-<<<<<<< HEAD
 		removeUnfulfilledAsk(lowestAsk);
-=======
-		removeUnfulfilledAsk(lowestAsk)
->>>>>>> 84707d54824231fdc2b732dfb59ba044f31039d8
 		// this is a BUYING trade - the transaction happens at the higest bid's timestamp, and the transaction price happens at the lowest ask
 		var match = new matchedTransactionModule.MatchedTransaction(newBid.getUserId(), lowestAsk.getUserId(), new Date(), lowestAsk.getPrice(), newBid.getStock());
 		addMatchedTransaction(match);	
@@ -80,13 +68,9 @@ var attemptBidMatch = function(err, newBid, lowestAsk, next){
 		updateLatestPrice(match);
 		logMatchedTransactions();
 	} else {
-<<<<<<< HEAD
 		addUnfulfilledBid(newBid, function(stockName) {
 			//insert code
 		});
-=======
-		addUnfulfilledBid(newBid);
->>>>>>> 84707d54824231fdc2b732dfb59ba044f31039d8
 	}
 	next();
 }
@@ -167,7 +151,6 @@ var placeNewAskAndAttemptMatch = function(newAsk, next) {
 		});
 	});
 	
-<<<<<<< HEAD
 	// step 1b: identify the current/highest bid in unfulfilledBids of the same stock
 	getHighestBid(newAsk.getStock(), function(err, bid){
 		if(bid == null) {
@@ -183,13 +166,6 @@ var placeNewAskAndAttemptMatch = function(newAsk, next) {
 	// A match happens if the lowest ask is <= highest bid
 	function processAttemptAskMatch(){
 		attemptAskMatch(lowestAsk, highestBid, function(err, matchStatus){
-=======
-	// step 2: identify the current/highest bid in unfulfilledBids of the same stock
-	getHighestBid(newAsk.getStock(), function(err, highestBid){
-		// step 3: check if there is a match.
-		// A match happens if the lowest ask is <= highest bid
-		attemptAskMatch(err, newAsk, highestBid, function(err, matchStatus){ 
->>>>>>> 84707d54824231fdc2b732dfb59ba044f31039d8
 			if (!err){
 				console.log("ask is successful");
 				next(null);
@@ -239,10 +215,6 @@ var getCreditRemaining = function(buyerUserId, next) {
 	console.log("checking "+buyerUserId+" creditLimit");
 	connection.retrieveUserCredit(buyerUserId, function(userCredit) {
 		if (userCredit == null) {
-<<<<<<< HEAD
-=======
-			// this buyer is not in the hash table yet. Hence create a new entry for him
->>>>>>> 84707d54824231fdc2b732dfb59ba044f31039d8
 			next(undefined, 1000000, true);
 		} else {
 			next(undefined,userCredit, false);
@@ -278,13 +250,8 @@ var getCreditRemaining = function(buyerUserId, next) {
 
 var getAllCreditRemainingForDisplay = function(next) {
 	console.log("retrieving all credits:");
-<<<<<<< HEAD
 	connection.retrieveAllUserCredit(function(allUser, allCredit) {
 		next(null,allUser,allCredit);
-=======
-	connection.retrieveAllUserCredit(function(allUserCredit) {
-		next(null,allUserCredit);
->>>>>>> 84707d54824231fdc2b732dfb59ba044f31039d8
 	});
 }
 
@@ -295,11 +262,7 @@ var getAllCreditRemainingForDisplay = function(next) {
 var getLatestPrice = function(stock, next) {
 	console.log("get latest price from DB");
 	connection.retrieveLatestPrice(stock, function(latestPrice) {
-<<<<<<< HEAD
 		if (latestPrice == null) {
-=======
-		if (latestPrice == 0) {
->>>>>>> 84707d54824231fdc2b732dfb59ba044f31039d8
 			next(null,"N/A");
 		} else {
 			next(null,latestPrice);
@@ -334,7 +297,6 @@ var getLowestAskPrice = function(stock, next) {
 			next(null,lowestAsk);
 		}
 	});
-<<<<<<< HEAD
 }
 
 //reset database
@@ -342,8 +304,6 @@ var processEndDay = function(next) {
 	connection.flushdb(function() {
 		next();
 	});
-=======
->>>>>>> 84707d54824231fdc2b732dfb59ba044f31039d8
 }
 
 // call this to append all matched transactions in matchedTransactions to log file and clear matchedTransactions

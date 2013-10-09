@@ -15,12 +15,7 @@
  	 to replace with 
 	- boolean bidIsAccepted */
 
-<<<<<<< HEAD
 	var newBid = new bidModule.Bid(stock, bidPrice, user_id, new Date(), 0);
-=======
-	var newBid = new bidModule.Bid(stock, bidPrice, user_id);
-	
->>>>>>> 84707d54824231fdc2b732dfb59ba044f31039d8
 	exchange.placeNewBidAndAttemptMatch(newBid, function(err, bidIsAccepted){
 		req.session.stock = stock;
 		req.session.bidPrice = bidPrice;
@@ -237,17 +232,10 @@ function processSell(req,res){
  		}
 	});
 
-<<<<<<< HEAD
  	exchange.getAllCreditRemainingForDisplay(function (err, allUserList, allCreditList){
  		console.log("creditRemaining: "+allUserList.length);
 		allUser = allUserList;
 		allCredit = allCreditList;
-=======
- 	exchange.getAllCreditRemainingForDisplay(function (err,list){
- 		creditRemaining = list;
- 		console.log("creditRemaining: "+creditRemaining.length);
-
->>>>>>> 84707d54824231fdc2b732dfb59ba044f31039d8
  		counter++;
  		if (counter == TOTAL_COUNTER){
  			finalNext();
