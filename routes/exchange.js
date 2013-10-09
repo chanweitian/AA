@@ -3,6 +3,7 @@ var bidModule = require("./Bid");
 var askModule = require("./Ask");
 var matchedTransactionModule = require("./MatchedTransaction");
 var connection = require("./connection");
+var request = require("request")
 
 var addUnfulfilledBid = function(newBid, next){
 	console.log("adding bid");
@@ -65,6 +66,7 @@ var attemptBidMatch = function(err, newBid, lowestAsk, next){
 		addMatchedTransaction(match);	
 		// to be included here: inform Back Office Server of match
 		// to be done in v1.0
+		sendToBackOffice(match.toString());
 		updateLatestPrice(match);
 		logMatchedTransactions();
 	} else {
@@ -73,6 +75,15 @@ var attemptBidMatch = function(err, newBid, lowestAsk, next){
 		});
 	}
 	next();
+}
+
+var sendToBackOffice = function(txnDescription) {
+	request.get("http://10.0.106.239:81/aabo/Service.asmx/ProcessTransaction?teamId=G1T6&teamPassword=raspberry&transactionDescription="+txnDescription, function(err, res, body){
+		
+		if(!err){
+			console.log(body);
+		}
+	});
 }
 
 // call this method immediatley when a new bid (buying order) comes in
@@ -114,6 +125,7 @@ var attemptAskMatch = function(newAsk, highestBid, next){
 		addMatchedTransaction(match);
 		
 		// to be included here: inform Back Office Server of match
+		sendToBackOffice(match.toString());
 		// to be done in v1.0
 		updateLatestPrice(match);
 		logMatchedTransactions();
