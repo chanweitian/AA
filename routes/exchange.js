@@ -3,7 +3,8 @@ var bidModule = require("./Bid");
 var askModule = require("./Ask");
 var matchedTransactionModule = require("./MatchedTransaction");
 var connection = require("./connection");
-var request = require("request")
+var request = require("request");
+var fs = require("fs");
 
 var addUnfulfilledBid = function(newBid, next){
 	console.log("adding bid");
@@ -54,12 +55,12 @@ var updateLatestPrice = function(matched) {
 	connection.updateLatestPrice(stock, price);
 }
 
-var attemptBidMatch = function(err, newBid, lowestAsk, next){
+var attemptBidMatch = function(newBid, lowestAsk, next){
 	// step 5: check if there is a match.
 	// A match happens if the highest bid is bigger or equal to the lowest ask
 	if (lowestAsk!=null && newBid.getPrice() >= lowestAsk.getPrice()) {
 		// a match is found
-		//removeUnfulfilledBid(newBid);
+		removeUnfulfilledBid(newBid);
 		removeUnfulfilledAsk(lowestAsk);
 		// this is a BUYING trade - the transaction happens at the higest bid's timestamp, and the transaction price happens at the lowest ask
 		var match = new matchedTransactionModule.MatchedTransaction(newBid.getUserId(), lowestAsk.getUserId(), new Date(), lowestAsk.getPrice(), newBid.getStock());
@@ -68,7 +69,7 @@ var attemptBidMatch = function(err, newBid, lowestAsk, next){
 		// to be done in v1.0
 		sendToBackOffice(match.toString());
 		updateLatestPrice(match);
-		logMatchedTransactions();
+		logMatchedTransactions(match);
 	} 
 	next();
 }
@@ -94,6 +95,7 @@ var placeNewBidAndAttemptMatch = function(newBid, next) {
 	validateCreditLimit(newBid, function(err, okToContinue){
 		if (!okToContinue) {
 			console.log("bid unsuccessful - not enough credit");
+			logRejectedBuyOrder(newBid);
 			next(null,false);
 		} else {
 			// step 1: insert new bid into unfulfilledBids
@@ -110,7 +112,7 @@ var placeNewBidAndAttemptMatch = function(newBid, next) {
 			// count keeps track of the number of unfulfilled asks for this stock
 			getLowestAsk(newBid.getStock(), function(err, ask){
 				if(ask == null) {
-					//console.log("No Ask");
+					console.log("No Ask");
 					next(null,true);
 				} else {
 					lowestAsk = ask;
@@ -152,7 +154,7 @@ var attemptAskMatch = function(newAsk, highestBid, next){
 		sendToBackOffice(match.toString());
 		// to be done in v1.0
 		updateLatestPrice(match);
-		logMatchedTransactions();
+		logMatchedTransactions(match);
 	} 
 	next();
 }
@@ -343,10 +345,13 @@ var processEndDay = function(next) {
 }
 
 // call this to append all matched transactions in matchedTransactions to log file and clear matchedTransactions
-var logMatchedTransactions = function() {
+var logMatchedTransactions = function(matchedTransaction) {
 
-	console.log("writing to log file");
+	//console.log("writing to log file");
 
+	fs.appendFile('tmp/matched.log', matchedTransaction.toString()+"\n", function (err) {
+		if (err) return console.log(err);
+	});
 	/*
 	var log_File = this.MATCH_LOG_FILE;
 	this.matchedTransactions.forEach(function(transaction) {
@@ -361,6 +366,26 @@ var logMatchedTransactions = function() {
 	});
 	this.matchedTransactions = []; */
 }
+
+var logRejectedBuyOrder = function(bid){
+	fs.appendFile('tmp/rejected.log', bid.toString()+"\n", function (err) {
+		if (err) return console.log(err);
+	});
+}
+/* 
+// call this to append all rejected buy orders to log file
+ExchangeBean.prototype.logRejectedBuyOrder = function(bid) {
+	fs.appendFile(this.REJECTED_BUY_ORDERS_LOG_FILE, bid.toString() + "\n", function(err) {
+		if(err) {
+			console.log(err);
+		} else {
+			console.log("The file was saved!");
+		}
+	});
+}
+
+
+
 
 
 /*
@@ -377,18 +402,6 @@ var logMatchedTransactions = function() {
 	
 	// reset all credit limits of users
 	this.creditRemaining = [];
-}
-
- 
-// call this to append all rejected buy orders to log file
-ExchangeBean.prototype.logRejectedBuyOrder = function(bid) {
-	fs.appendFile(this.REJECTED_BUY_ORDERS_LOG_FILE, bid.toString() + "\n", function(err) {
-		if(err) {
-			console.log(err);
-		} else {
-			console.log("The file was saved!");
-		}
-	});
 }
 
 
