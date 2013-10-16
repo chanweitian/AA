@@ -69,17 +69,12 @@ var attemptBidMatch = function(err, newBid, lowestAsk, next){
 		sendToBackOffice(match.toString());
 		updateLatestPrice(match);
 		logMatchedTransactions();
-	} else {
-		addUnfulfilledBid(newBid, function(stockName) {
-			//insert code
-		});
-	}
+	} 
 	next();
 }
 
 var sendToBackOffice = function(txnDescription) {
 	request.get("http://10.0.106.239:81/aabo/Service.asmx/ProcessTransaction?teamId=G1T6&teamPassword=raspberry&transactionDescription="+txnDescription, function(err, res, body){
-		
 		if(!err){
 			console.log(body);
 		}
@@ -90,28 +85,57 @@ var sendToBackOffice = function(txnDescription) {
 // this method returns false if this buy order has been rejected because of a credit limit breach
 // it returns true if the bid has been successfully added
 var placeNewBidAndAttemptMatch = function(newBid, next) {
+
+	var counter = 0;
+	var TOTAL_COUNTER = 2;
+	var lowestAsk;
+	var highestBid;
+
 	validateCreditLimit(newBid, function(err, okToContinue){
 		if (!okToContinue) {
 			console.log("bid unsuccessful - not enough credit");
 			next(null,false);
 		} else {
 			// step 1: insert new bid into unfulfilledBids
-			//addUnfulfilledBid(newBid);
-			// step 2: check if there is any unfulfilled asks (sell orders) for the new bid's stock. if not, just return
-			// count keeps track of the number of unfulfilled asks for this stock
-			getLowestAsk(newBid.getStock(), function(err, lowestAsk){	
-				attemptBidMatch(err, newBid, lowestAsk, function(err, matchStatus){ 
-					if (!err){
-						console.log("bid is successuful");
-						next(null,true);
-					} else {
-						console.log("error occured");
-						next(err, null);
+			addUnfulfilledBid(newBid, function(stockName){
+				getHighestBid(stockName, function(err,bid){
+					highestBid = bid;
+					counter++;
+					if (counter == TOTAL_COUNTER){
+						processAttemptBidMatch();
 					}
 				});
 			});
+			// step 2: check if there is any unfulfilled asks (sell orders) for the new bid's stock. if not, just return
+			// count keeps track of the number of unfulfilled asks for this stock
+			getLowestAsk(newBid.getStock(), function(err, ask){
+				if(ask == null) {
+					//console.log("No Ask");
+					next(null,true);
+				} else {
+					lowestAsk = ask;
+					counter++;
+					if (counter == TOTAL_COUNTER){
+						processAttemptBidMatch();
+					}		
+				}		
+			});
 		}
 	});
+
+	function processAttemptBidMatch(){
+		console.log("Trying to attempt bid");
+		attemptBidMatch(newBid, lowestAsk, function(err, matchStatus){ 
+			if (!err){
+				console.log("bid is successuful");
+				next(null,true);
+			} else {
+				console.log("error occured");
+				next(err, null);
+			}
+		});
+
+	}
 }
 
 
@@ -153,7 +177,7 @@ var placeNewAskAndAttemptMatch = function(newAsk, next) {
 	// step 1a: insert new ask into unfulfilledAsks
 	addUnfulfilledAsk(newAsk, function(stockName){
 		// step 2: identify the current/lowest ask in unfulfilledAsks of the same stock
-		console.log("Done with adding ask");
+		//console.log("Done with adding ask");
 		getLowestAsk(stockName, function(err,ask){
 			lowestAsk = ask;
 			counter++;
