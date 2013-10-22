@@ -7,10 +7,28 @@ var express = require('express');
 //var routes = require('./routes');
 var http = require('http');
 var path = require('path');
+var RedisStore = require('connect-redis')(express);
 
 var authentication = require('./routes/authentication');
 var stock = require('./routes/stock');
 var app = express();
+
+var sentinel = require('redis-sentinel');
+
+// List the sentinel endpoints
+var endpoints = [
+	{host: '127.0.0.1', port: 26379},
+	{host: '127.0.0.1', port: 26380}
+];
+
+var opts = {}; // Standard node_redis client options
+var masterName = 'mymaster';
+
+var masterClient = sentinel.createClient(endpoints, masterName, {role: 'master'}); 
+
+masterClient.on("error", function (err) {
+    express.logger("Error from MasterClient" + err);
+});
 
 // all environments
 app.set('port', process.env.PORT || 3000);
@@ -21,7 +39,12 @@ app.use(express.logger('dev'));
 app.use(express.bodyParser());
 app.use(express.methodOverride());
 app.use(express.cookieParser());
-app.use(express.session({secret: 'HOLYCOW'}));
+app.use(express.session({
+  store: new RedisStore({
+		client: masterClient
+		}),
+  secret: 'HOLYCOW'
+}));
 app.use(app.router);
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -51,7 +74,7 @@ app.get('/endTradingDay',authentication.checkAuth,stock.processEndDay);
 //all other pages will get directed to login page
 app.get('*', authentication.displayLoginPage);
 
+
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));
 });
-

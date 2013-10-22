@@ -1,23 +1,41 @@
-var redis = require("redis");
+//var redis = require("redis");
 var bidModule = require("./Bid");
 var askModule = require("./Ask");
+var matchedTransactionModule = require("./MatchedTransaction");
 
-var client = redis.createClient();
+var sentinel = require('redis-sentinel');
 
-client.on("error", function (err) {
-    console.log("Error " + err);
+// List the sentinel endpoints
+var endpoints = [
+    {host: '127.0.0.1', port: 26379},
+    {host: '127.0.0.1', port: 26380}
+];
+
+var opts = {}; // Standard node_redis client options
+var masterName = 'mymaster';
+
+// An equivalent way of doing the above (if you don't want to have to pass the endpoints around all the time) is
+var writeClient = sentinel.createClient(endpoints, masterName, {role: 'master'}); 
+var readClient = sentinel.createClient(endpoints, masterName, {role: 'slave'});
+
+readClient.on("error", function (err) {
+    console.log("Error coming from ReadClient " + err);
 });
-	
+
+writeClient.on("error", function (err) {
+    console.log("Error coming from WriteClient" + err);
+});
+
 var convertDateToDateTime = function(date, next) {
 	next(date.getFullYear() + "-" + (date.getMonth()+1) + "-" + date.getDate() + " "  + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds());
 }
 
 var getNextBuyIndex = function(next) {
-	client.setnx("integer buyIndex", 1, function (err, reply) {
+	writeClient.setnx("integer buyIndex", 1, function (err, reply) {
 		if (reply == 1) {
 			next(1);
 		} else {
-			client.incr("integer buyIndex", function(err, incrReply) {
+			writeClient.incr("integer buyIndex", function(err, incrReply) {
 				next(incrReply);
 			});
 		}
@@ -28,24 +46,24 @@ var addBuyOrder = function(bid, next){
 	var stock = bid.getStock();
 	var price = bid.getPrice();
 	getNextBuyIndex(function(buyId) {
-		client.zadd("sortedList buyId"+stock, price, buyId);
-		client.hset("hash buyOrder"+buyId, "buyerID", bid.getUserId());
-		client.hset("hash buyOrder"+buyId, "stockID", stock);
-		client.hset("hash buyOrder"+buyId, "bidPrice", price);
+		writeClient.zadd("sortedList buyId"+stock, price, buyId);
+		writeClient.hset("hash buyOrder"+buyId, "buyerID", bid.getUserId());
+		writeClient.hset("hash buyOrder"+buyId, "stockID", stock);
+		writeClient.hset("hash buyOrder"+buyId, "bidPrice", price);
 		
 		convertDateToDateTime(bid.getDate(), function(dateTime) {
-			client.hset("hash buyOrder"+buyId, "dateTime", dateTime);
+			writeClient.hset("hash buyOrder"+buyId, "dateTime", dateTime);
 			next(stock);
 		});
 	});
 }
 
 var getNextSellIndex = function(next) {
-	client.setnx("integer sellIndex", 1, function (err, reply) {
+	writeClient.setnx("integer sellIndex", 1, function (err, reply) {
 		if (reply == 1) {
 			next(1);
 		} else {
-			client.incr("integer sellIndex", function(err, incrReply) {
+			writeClient.incr("integer sellIndex", function(err, incrReply) {
 				next(incrReply);
 			});
 		}
@@ -56,69 +74,71 @@ var addSellOrder = function(ask, next){
 	var stock = ask.getStock();
 	var price = ask.getPrice();
 	getNextSellIndex(function(sellId) {
-		client.zadd("sortedList sellId"+stock, price, sellId);
-		client.hset("hash sellOrder"+sellId, "sellerID", ask.getUserId());
-		client.hset("hash sellOrder"+sellId, "stockID", stock);
-		client.hset("hash sellOrder"+sellId, "askPrice", price);
+		writeClient.zadd("sortedList sellId"+stock, price, sellId);
+		writeClient.hset("hash sellOrder"+sellId, "sellerID", ask.getUserId());
+		writeClient.hset("hash sellOrder"+sellId, "stockID", stock);
+		writeClient.hset("hash sellOrder"+sellId, "askPrice", price);
 		
 		convertDateToDateTime(ask.getDate(), function(dateTime) {
-			client.hset("hash sellOrder"+sellId, "dateTime", dateTime);
+			writeClient.hset("hash sellOrder"+sellId, "dateTime", dateTime);
 			next(stock);
 		});
 	});
 }
 
 var addUserCredit = function(userID, credit){
-	client.hset("hash userCredit", userID, credit);
+	writeClient.hset("hash userCredit", userID, credit);
 }
 
 var getNextMatchedIndex = function(next) {
-	client.setnx("integer matchedIndex", 1, function (err, reply) {
+	writeClient.setnx("integer matchedIndex", 1, function (err, reply) {
 		if (reply == 1) {
 			next(1);
 		} else {
-			client.incr("integer matchedIndex", function(err, incrReply) {
+			writeClient.incr("integer matchedIndex", function(err, incrReply) {
 				next(incrReply);
 			});
 		}
 	});
 }
 
-var addMatchedTransaction = function(matched){
+var addMatchedTransaction = function(matched,multi,next){
 	getNextMatchedIndex(function(matchedId) {
-		client.rpush("list matchedId", matchedId);
-		client.hset("hash matchedTransaction"+matchedId, "buyerID", matched.getBuyerId());
-		client.hset("hash matchedTransaction"+matchedId, "sellerID", matched.getSellerId());
-		client.hset("hash matchedTransaction"+matchedId, "price", matched.getPrice());
-		client.hset("hash matchedTransaction"+matchedId, "stockID", matched.getStock());
+		matched.setMatchedId(matchedId);
+		multi.sadd("set matchedId", matchedId);
+		multi.hset("hash matchedTransaction"+matchedId, "buyerID", matched.getBuyerId());
+		multi.hset("hash matchedTransaction"+matchedId, "sellerID", matched.getSellerId());
+		multi.hset("hash matchedTransaction"+matchedId, "price", matched.getPrice());
+		multi.hset("hash matchedTransaction"+matchedId, "stockID", matched.getStock());
 		
 		convertDateToDateTime(matched.getDate(), function(dateTime) {
-			client.hset("hash matchedTransaction"+matchedId, "dateTime", dateTime);
+			multi.hset("hash matchedTransaction"+matchedId, "dateTime", dateTime);
+			next(true,matched);
 		});
 	});
 }
 
 //returns null if user is not in usercredit table yet
 var retrieveUserCredit = function(userID, next) {
-	client.hget("hash userCredit", "userID", function (err, reply) {
+	readClient.hget("hash userCredit", userID, function (err, reply) {
 		next(reply);
 	});
 }
 
 //returns 0 if no latest price
 var retrieveLatestPrice = function(stockID, next) {
-	client.hget("hash latestPrice", stockID, function(err, reply) {
+	readClient.hget("hash latestPrice", stockID, function(err, reply) {
 		next(reply);
 	});
 }
 
 //returns null if no bids for stock yet
 var getHighestBidPrice = function(stockID, next) {
-	client.zrange("sortedList buyId"+stockID, -1, -1, function (err, reply) {
+	readClient.zrange("sortedList buyId"+stockID, -1, -1, function (err, reply) {
 		if (reply[0] == null) {
 			next(null);
 		} else {
-			client.zscore("sortedList buyId"+stockID, reply[0], function(err, highestBidPrice) {
+			readClient.zscore("sortedList buyId"+stockID, reply[0], function(err, highestBidPrice) {
 				next(highestBidPrice);
 			});
 		}
@@ -127,11 +147,11 @@ var getHighestBidPrice = function(stockID, next) {
 
 //returns null if no asks for stock yet
 var getLowestAskPrice = function(stockID, next) {
-	client.zrange("sortedList sellId"+stockID, 0, 0, function (err, reply) {
+	readClient.zrange("sortedList sellId"+stockID, 0, 0, function (err, reply) {
 		if (reply[0] == null) {
 			next(null);
 		} else {
-			client.zscore("sortedList sellId"+stockID, reply[0], function(err, lowestAskPrice) {
+			readClient.zscore("sortedList sellId"+stockID, reply[0], function(err, lowestAskPrice) {
 				next(lowestAskPrice);
 			});
 		}
@@ -139,12 +159,12 @@ var getLowestAskPrice = function(stockID, next) {
 }
 
 var getHighestBid = function(stockID, next) {
-	client.zrange("sortedList buyId"+stockID, -1, -1, function (err, reply) {
+	readClient.zrange("sortedList buyId"+stockID, -1, -1, function (err, reply) {
 		if (reply[0] == null) {
 			next(null);
 		} else {
 			
-			client.hgetall("hash buyOrder"+reply[0], function(err, reply2) {
+			readClient.hgetall("hash buyOrder"+reply[0], function(err, reply2) {
 				next(new bidModule.Bid(reply2["stockID"], reply2["bidPrice"], reply2["buyerID"], reply2["dateTime"], reply[0]));
 			});
 		}
@@ -152,12 +172,12 @@ var getHighestBid = function(stockID, next) {
 }
 
 var getLowestAsk = function(stockID, next) {
-	client.zrange("sortedList sellId"+stockID, 0, 0, function (err, reply) {
+	readClient.zrange("sortedList sellId"+stockID, 0, 0, function (err, reply) {
 		if (reply[0] == null) {
 			next(null);
 		} else {
 			
-			client.hgetall("hash sellOrder"+reply[0], function(err, reply2) {
+			readClient.hgetall("hash sellOrder"+reply[0], function(err, reply2) {
 				next(new askModule.Ask(reply2["stockID"], reply2["askPrice"], reply2["sellerID"], reply2["dateTime"], reply[0]));
 			});
 		}
@@ -170,7 +190,7 @@ var retrieveAllUserCredit = function(next) {
 	var creditArr;
 	var counter = 0;
 	
-	client.hkeys("hash userCredit", function(err, reply1) {
+	readClient.hkeys("hash userCredit", function(err, reply1) {
 		userArr = reply1;
 		counter++;
 		
@@ -179,7 +199,7 @@ var retrieveAllUserCredit = function(next) {
 		}
 	});
 	
-	client.hvals("hash userCredit", function(err, reply2) {
+	readClient.hvals("hash userCredit", function(err, reply2) {
 		creditArr = reply2;
 		counter++;
 		if (counter==2) {
@@ -191,9 +211,9 @@ var retrieveAllUserCredit = function(next) {
 
 var retrieveBuyOrders = function(stockID, next) {
 	var list = new Array();
-	client.zrange("sortedList buyId"+stockID, 0, -1, function (err, allBuyId) {
+	readClient.zrange("sortedList buyId"+stockID, 0, -1, function (err, allBuyId) {
 		allBuyId.forEach(function (buyId, i) {
-			client.hgetall("hash buyOrder"+buyId, function (err, reply) {
+			readClient.hgetall("hash buyOrder"+buyId, function (err, reply) {
 				list[i] = reply;
 				if (i == allBuyId.length-1) {
 					next(list);
@@ -209,9 +229,9 @@ var retrieveBuyOrders = function(stockID, next) {
 
 var retrieveSellOrders = function(stockID, next) {
 	var list = new Array();
-	client.zrange("sortedList sellId"+stockID, 0, -1, function (err, allSellId) {
+	readClient.zrange("sortedList sellId"+stockID, 0, -1, function(err, allSellId) {
 		allSellId.forEach(function (sellId, i) {
-			client.hgetall("hash sellOrder"+sellId, function (err, reply) {
+			readClient.hgetall("hash sellOrder"+sellId, function(err, reply) {
 				list[i] = reply;
 				if (i == allSellId.length-1) {
 					next(list);
@@ -224,35 +244,66 @@ var retrieveSellOrders = function(stockID, next) {
 	});
 }
 
+var retrieveMatchedTransactions = function(next) {
+	var list = new Array();
+	readClient.smembers("set matchedId", function(err, allMatchedId) {
+		allMatchedId.forEach(function (matchedId, i) {
+			readClient.hgetall("hash matchedTransaction"+matchedId, function(err, reply) {
+				list[i] = new matchedTransactionModule.MatchedTransaction(reply.BuyerID, reply.SellerID, reply.dateTime, reply.price, reply.stockID);
+				if (i == allMatchedId.length-1) {
+					next(list);
+				}
+			});
+		});
+		if (allMatchedId.length==0) {
+			next(list);
+		};
+	});
+}
+
 var updateUserCredit = function(userID, credit) {
-	client.hset("hash userCredit", userID, credit);
+	writeClient.hset("hash userCredit", userID, credit);
 }
 
 var updateLatestPrice = function(stockID, latestPrice) {
-	client.hset("hash latestPrice", stockID, latestPrice);
+	writeClient.hset("hash latestPrice", stockID, latestPrice);
 }
 
-var removeBuyOrder = function(bid) {
-	client.zrem("sortedList buyId"+bid.getStock(), bid.getBuyId());
-	client.del("buyOrder"+bid.getBuyId());
+var removeBuyOrder = function(bid,multi,next) {
+	multi.zrem("sortedList buyId"+bid.getStock(), bid.getBuyId());
+	multi.del("hash buyOrder"+bid.getBuyId());
+	next(true);
 }
 
-var removeSellOrder = function(ask) {
-	client.zrem("sortedList sellId"+ask.getStock(), ask.getSellId());
-	client.del("sellOrder"+ask.getSellId());
+var removeSellOrder = function(ask,multi,next) {
+	multi.zrem("sortedList sellId"+ask.getStock(), ask.getSellId());
+	multi.del("hash sellOrder"+ask.getSellId());
+	next(true);
 }
 
-/*
-var removeMatchedTransaction = function(ask) {
-	client.zrem("sortedList sellId"+ask.getStock(), ask.getBuyID());
-	client.del("sellOrder"+sellId);
+var removeMatchedTransaction = function(matched) {
+	writeClient.srem("set matchedId", matched.getMatchedId());
+	writeClient.del("hash matchedTransaction"+matched.getMatchedId());
 }
-*/
 
 var flushdb = function(next) {
-	client.flushdb();
+	writeClient.flushdb();
 	next();
 }
+
+var startMatchingTransaction = function(sellId, buyId, next) {
+	writeClient.watch("buyOrder"+buyId);
+	writeClient.watch("sellOrder"+sellId);
+	var multi = writeClient.multi();
+	next(multi);
+}
+
+var executeMatchingTransaction = function(multi,next) {
+	multi.exec(function(err,replies) {
+		next(err,replies);
+	});
+}
+	
 
 module.exports.addBuyOrder = addBuyOrder;
 module.exports.addSellOrder = addSellOrder;
@@ -268,10 +319,14 @@ module.exports.getLowestAsk = getLowestAsk;
 module.exports.retrieveAllUserCredit = retrieveAllUserCredit;
 module.exports.retrieveBuyOrders = retrieveBuyOrders;
 module.exports.retrieveSellOrders = retrieveSellOrders;
-
+module.exports.retrieveMatchedTransactions = retrieveMatchedTransactions;
 module.exports.updateUserCredit = updateUserCredit;
 module.exports.updateLatestPrice = updateLatestPrice;
 
 module.exports.removeBuyOrder = removeBuyOrder;
 module.exports.removeSellOrder = removeSellOrder;
+module.exports.removeMatchedTransaction = removeMatchedTransaction;
 module.exports.flushdb = flushdb;
+
+module.exports.startMatchingTransaction = startMatchingTransaction;
+module.exports.executeMatchingTransaction = executeMatchingTransaction;

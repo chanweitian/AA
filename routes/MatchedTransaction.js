@@ -5,6 +5,7 @@ function MatchedTransaction (buyerId, sellerId, date, price, stock) {
 	this.date = date;
 	this.price = price;
 	this.stock = stock;
+	this.matchedId = 0;
 }
 
 MatchedTransaction.prototype.getStock = function(){
@@ -25,6 +26,14 @@ MatchedTransaction.prototype.getSellerId = function(){
 
 MatchedTransaction.prototype.getDate = function(){
 	return this.date;
+}
+
+MatchedTransaction.prototype.getMatchedId = function(){
+	return this.matchedId;
+}
+
+MatchedTransaction.prototype.setMatchedId = function(id){
+	this.matchedId = id;
 }
 
 MatchedTransaction.prototype.toString = function(){

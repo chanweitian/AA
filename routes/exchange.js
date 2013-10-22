@@ -27,59 +27,132 @@ var getLowestAsk = function(stockID, next){
 	});
 }
 
-var removeUnfulfilledBid = function(bid){
+var removeUnfulfilledBid = function(bid,multi,next){
 	console.log("removing bid "+bid.getStock());
-	connection.removeBuyOrder(bid);
+	connection.removeBuyOrder(bid,multi,function(done) {
+		if (done==true) {
+			next(true);
+		}
+	});
 }
 
-var removeUnfulfilledAsk = function(ask){
+var removeUnfulfilledAsk = function(ask,multi,next){
 	console.log("removing ask "+ask.getStock());
-	connection.removeSellOrder(ask);
+	connection.removeSellOrder(ask,multi,function(done) {
+		if (done==true) {
+			next(true);
+		}
+	});
 	/*console.log("Simultaing hanging function");
 	setTimeout(function() { 
 		console.log("Completed hanging function");
 	}, 1000);*/
 }
 
-var addMatchedTransaction = function(match){
+var addMatchedTransaction = function(match,multi,next){
 	console.log("adding match "+match.getStock());	
-	connection.addMatchedTransaction(match);
+	connection.addMatchedTransaction(match,multi,function(done,matched) {
+		if (done==true) {
+			next(true,matched);
+		}
+	});
 }
 
 // updates either latestPriceForSmu, latestPriceForNus or latestPriceForNtu
 // based on the MatchedTransaction object passed in
-var updateLatestPrice = function(matched) {
+var updateLatestPrice = function(matched,multi,next) {
 	console.log("updating the lastest price: "+matched.toString());
 	var stock = matched.getStock();
 	var price = matched.getPrice();
-	connection.updateLatestPrice(stock, price);
+	connection.updateLatestPrice(stock, price,multi,function(done) {
+		if (done==true) {
+			next(true);
+		}
+	});
 }
 
-var attemptBidMatch = function(newBid, lowestAsk, next){
+var attemptBidMatch = function(highestBid, lowestAsk, next){
 	// step 5: check if there is a match.
 	// A match happens if the highest bid is bigger or equal to the lowest ask
-	if (lowestAsk!=null && newBid.getPrice() >= lowestAsk.getPrice()) {
+	if (lowestAsk!=null && highestBid.getPrice() >= lowestAsk.getPrice()) {
+		connection.startMatchingTransaction(lowestAsk.getSellId(), highestBid.getBuyId(), function(multi) {
+			var counter=0;
+			var match;
+		
 		// a match is found
-		removeUnfulfilledBid(newBid);
-		removeUnfulfilledAsk(lowestAsk);
-		// this is a BUYING trade - the transaction happens at the higest bid's timestamp, and the transaction price happens at the lowest ask
-		var match = new matchedTransactionModule.MatchedTransaction(newBid.getUserId(), lowestAsk.getUserId(), new Date(), lowestAsk.getPrice(), newBid.getStock());
-		addMatchedTransaction(match);	
-		// to be included here: inform Back Office Server of match
-		// to be done in v1.0
-		sendToBackOffice(match.toString());
-		updateLatestPrice(match);
-		logMatchedTransactions(match);
+			removeUnfulfilledBid(highestBid, multi, function(done) {
+				if (done==true) {
+					counter++;
+					if (counter==3) {
+						executeMatchingTransaction(multi,match);
+					}
+				}
+			});
+			
+			removeUnfulfilledAsk(lowestAsk, multi, function(done2) {
+				if (done2==true) {
+					counter++;
+					if (counter==3) {
+						executeMatchingTransaction(multi,match);
+					}
+				}
+			});
+			
+			// this is a BUYING trade - the transaction happens at the higest bid's timestamp, and the transaction price happens at the lowest ask
+			var match = new matchedTransactionModule.MatchedTransaction(highestBid.getUserId(), lowestAsk.getUserId(), new Date(), lowestAsk.getPrice(), highestBid.getStock());
+			addMatchedTransaction(match, multi, function(done3,matched) {
+				if (done3==true) {
+					match = matched;
+					counter++;
+					if (counter==3) {
+						executeMatchingTransaction(multi,match);
+					}
+				}
+			});
+		});
 	} 
 	next();
 }
 
-var sendToBackOffice = function(txnDescription) {
-	request.get("http://10.0.106.239:81/aabo/Service.asmx/ProcessTransaction?teamId=G1T6&teamPassword=raspberry&transactionDescription="+txnDescription, function(err, res, body){
+var sendToBackOffice = function(txnDescription,match,next) {
+	/*request.get("https://www.google.com.sg/das;fkljslkfj", function(err, res, body){
+		console.log(res.statusCode);
 		if(!err){
-			console.log(body);
+			console.log("No error");
+		} 
+	});*/
+	
+	console.log("http://10.0.106.239:81/aabo/Service.asmx/ProcessTransaction?teamId=G1T6&teamPassword=raspberry&transactionDescription="+txnDescription);
+	/*request.get("http://10.0.106.239:81/aabo/Service.asmx/ProcessTransaction?teamId=G1T6&teamPassword=raspberry&transactionDescription="+txnDescription, function(err, res, body){
+		
+		console.log(res.statusCode);
+		if(!err){
+			//server down
+			if(res.statusCode != 200){
+				//write to database
+			} else {*/
+				console.log("Success!");
+				connection.removeMatchedTransaction(match);
+				connection.retrieveMatchedTransactions(function(allMatched) {
+					allMatched.forEach(function (matched, i) {
+						console.log("http://10.0.106.239:81/aabo/Service.asmx/ProcessTransaction?teamId=G1T6&teamPassword=raspberry&transactionDescription="+matched.toString());
+						//if not error, then...
+						connection.removeMatchedTransaction(matched);
+						//else return...
+						
+						if (i == allMatched.length-1) {
+							next();
+						}
+					});
+				});
+				//check if database is empty.
+				// if databse not empty means there are transaction not sent to BO yet. Time to sent
+				
+			/*}
+		
+			
 		}
-	});
+	}); */
 }
 
 // call this method immediatley when a new bid (buying order) comes in
@@ -127,7 +200,7 @@ var placeNewBidAndAttemptMatch = function(newBid, next) {
 
 	function processAttemptBidMatch(){
 		console.log("Trying to attempt bid");
-		attemptBidMatch(newBid, lowestAsk, function(err, matchStatus){ 
+		attemptBidMatch(highestBid, lowestAsk, function(err, matchStatus){ 
 			if (!err){
 				console.log("bid is successuful");
 				next(null,true);
@@ -141,24 +214,57 @@ var placeNewBidAndAttemptMatch = function(newBid, next) {
 }
 
 
-var attemptAskMatch = function(newAsk, highestBid, next){
-	if (highestBid!=null && newAsk.getPrice() <= highestBid.getPrice()) {
-		// a match is found
-		removeUnfulfilledBid(highestBid);
-		removeUnfulfilledAsk(newAsk)
-		// this is a SELLING trade - the transaction happens at the lowest ask's timestamp, and the transaction price happens at the highest bid
-		var match = new matchedTransactionModule.MatchedTransaction(highestBid.getUserId(), newAsk.getUserId(), new Date(), highestBid.getPrice(), newAsk.getStock());
-		addMatchedTransaction(match);
-		
-		// to be included here: inform Back Office Server of match
-		sendToBackOffice(match.toString());
-		// to be done in v1.0
-		updateLatestPrice(match);
-		logMatchedTransactions(match);
+var attemptAskMatch = function(lowestAsk, highestBid, next){
+	if (highestBid!=null && lowestAsk.getPrice() <= highestBid.getPrice()) {
+		connection.startMatchingTransaction(lowestAsk.getSellId(), highestBid.getBuyId(), function(multi) {
+			var counter=0;
+			var match;
+			
+			// a match is found
+			removeUnfulfilledBid(highestBid, multi, function(done) {
+				if (done==true) {
+					counter++;
+					if (counter==3) {
+						executeMatchingTransaction(multi,match);
+					}
+				}
+			});
+			
+			removeUnfulfilledAsk(lowestAsk, multi, function(done2) {
+				if (done2==true) {
+					counter++;
+					if (counter==3) {
+						executeMatchingTransaction(multi,match);
+					}
+				}
+			});
+			
+			// this is a SELLING trade - the transaction happens at the lowest ask's timestamp, and the transaction price happens at the highest bid
+			match = new matchedTransactionModule.MatchedTransaction(highestBid.getUserId(), lowestAsk.getUserId(), new Date(), highestBid.getPrice(), lowestAsk.getStock());
+			addMatchedTransaction(match, multi, function(done3,matched) {
+				if (done3==true) {
+					match = matched;
+					counter++;
+					if (counter==3) {
+						executeMatchingTransaction(multi,match);
+					}
+				}
+			});
+			
+		});
 	} 
 	next();
 }
 
+var executeMatchingTransaction = function(multi,match) {
+	connection.executeMatchingTransaction(multi, function(err, replies) {
+		if (replies!=null) {
+			sendToBackOffice(match.toString(),match,function() {} );
+			updateLatestPrice(match);
+			logMatchedTransactions(match);
+		}
+	});
+}
 
 var getHighestBid = function(stockID, next){
 	console.log("Searching for the highest bid");
