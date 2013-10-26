@@ -15,7 +15,7 @@
  	var user_id = req.body.user_id;
  	var password = req.body.password;
 
- 	if (user_id == 'john' && password == 'password') {
+ 	if (password == 'password') {
  		req.session.user_id = user_id;
  		res.redirect('/loginSuccess');
  	} else {

@@ -123,14 +123,14 @@ var sendToBackOffice = function(txnDescription,match,next) {
 	});*/
 	
 	console.log("http://10.0.106.239:81/aabo/Service.asmx/ProcessTransaction?teamId=G1T6&teamPassword=raspberry&transactionDescription="+txnDescription);
-	/*request.get("http://10.0.106.239:81/aabo/Service.asmx/ProcessTransaction?teamId=G1T6&teamPassword=raspberry&transactionDescription="+txnDescription, function(err, res, body){
+	request.get("http://10.0.106.239:81/aabo/Service.asmx/ProcessTransaction?teamId=G1T6&teamPassword=raspberry&transactionDescription="+txnDescription, function(err, res, body){
 		
-		console.log(res.statusCode);
+		//console.log(res.statusCode);
 		if(!err){
 			//server down
 			if(res.statusCode != 200){
 				//write to database
-			} else {*/
+			} else {
 				console.log("Success!");
 				connection.removeMatchedTransaction(match);
 				connection.retrieveMatchedTransactions(function(allMatched) {
@@ -148,11 +148,11 @@ var sendToBackOffice = function(txnDescription,match,next) {
 				//check if database is empty.
 				// if databse not empty means there are transaction not sent to BO yet. Time to sent
 				
-			/*}
+			}
 		
 			
 		}
-	}); */
+	}); 
 }
 
 // call this method immediatley when a new bid (buying order) comes in

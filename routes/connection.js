@@ -7,8 +7,8 @@ var sentinel = require('redis-sentinel');
 
 // List the sentinel endpoints
 var endpoints = [
-    {host: '127.0.0.1', port: 26379},
-    {host: '127.0.0.1', port: 26380}
+    {host: '192.168.0.4', port: 26380},
+    {host: '192.168.0.5', port: 26380}
 ];
 
 var opts = {}; // Standard node_redis client options
@@ -246,10 +246,11 @@ var retrieveSellOrders = function(stockID, next) {
 
 var retrieveMatchedTransactions = function(next) {
 	var list = new Array();
-	readClient.smembers("set matchedId", function(err, allMatchedId) {
+	writeClient.smembers("set matchedId", function(err, allMatchedId) {
 		allMatchedId.forEach(function (matchedId, i) {
-			readClient.hgetall("hash matchedTransaction"+matchedId, function(err, reply) {
-				list[i] = new matchedTransactionModule.MatchedTransaction(reply.BuyerID, reply.SellerID, reply.dateTime, reply.price, reply.stockID);
+			console.log(matchedId);
+			writeClient.hgetall("hash matchedTransaction"+matchedId, function(err, reply) {
+				list[i] = new matchedTransactionModule.MatchedTransaction(reply.buyerID, reply.sellerID, reply.dateTime, reply.price, reply.stockID);
 				if (i == allMatchedId.length-1) {
 					next(list);
 				}

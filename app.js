@@ -17,8 +17,8 @@ var sentinel = require('redis-sentinel');
 
 // List the sentinel endpoints
 var endpoints = [
-	{host: '127.0.0.1', port: 26379},
-	{host: '127.0.0.1', port: 26380}
+    {host: '192.168.0.4', port: 26380},
+    {host: '192.168.0.5', port: 26380}
 ];
 
 var opts = {}; // Standard node_redis client options
