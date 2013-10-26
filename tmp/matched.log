@@ -11,6 +11,7 @@ stock: ntu, amt: 10, bidder userId: john, seller userId: john, date: Tue Oct 22 
 stock: smu, amt: 10, bidder userId: john, seller userId: john, date: Tue Oct 22 2013 21:40:46 GMT+0800 (Malay Peninsula Standard Time)
 stock: smu, amt: 10, bidder userId: john, seller userId: john, date: Tue Oct 22 2013 22:18:39 GMT+0800 (Malay Peninsula Standard Time)
 stock: smu, amt: 10, bidder userId: john, seller userId: john, date: Tue Oct 22 2013 22:22:27 GMT+0800 (Malay Peninsula Standard Time)
+<<<<<<< HEAD
 stock: smu, amt: 10, bidder userId: john, seller userId: john, date: Sat Oct 26 2013 15:24:04 GMT+0800 (SGT)
 stock: smu, amt: 10, bidder userId: john, seller userId: john, date: Sat Oct 26 2013 16:24:41 GMT+0800 (SGT)
 stock: smu, amt: 1, bidder userId: damian, seller userId: john, date: Sat Oct 26 2013 16:25:41 GMT+0800 (SGT)
