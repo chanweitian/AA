@@ -9,6 +9,7 @@
     "request" : "*",
     "express": "3.3.5",
     "ejs": "*",
-	"connect-redis": "1.4.5"
+	   "connect-redis": "1.4.5"
+     "redis-sentinel": "*"
   }
 }
